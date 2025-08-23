@@ -151,19 +151,19 @@ class BotStatistics:
         today = self.get_daily_stats()
         top_triggers = self.get_top_triggers(5)
         
-        summary = f"""📊 **Статистика бота**
+        summary = f"""📊 Статистика бота
 
 🔥 Всего подъёбов: {total['total_roasts']}
 👥 Уникальных пользователей: {total['unique_users']}
 💬 Уникальных групп: {total['unique_groups']}
 📅 Дней активности: {total['days_active']}
 
-**Сегодня ({today['date']}):**
+Сегодня ({today['date']}):
 🔥 Подъёбов: {today['roasts']}
 👥 Пользователей: {today['unique_users']}
 💬 Групп: {today['unique_groups']}
 
-**Топ триггеров:**"""
+Топ триггеров:"""
         
         for i, (trigger, count) in enumerate(top_triggers.items(), 1):
             summary += f"\n{i}. '{trigger}' - {count} раз"
@@ -184,7 +184,7 @@ class BotStatistics:
             day_stats = self.get_daily_stats(date)
             weekly_stats.append(day_stats)
         
-        detailed = f"""📊 **Детальная статистика бота**
+        detailed = f"""📊 Детальная статистика бота
 
 🔥 Всего подъёбов: {total['total_roasts']}
 👥 Уникальных пользователей: {total['unique_users']}
@@ -192,12 +192,12 @@ class BotStatistics:
 📅 Дней активности: {total['days_active']}
 🚀 Запущен: {total['start_date'][:10]}
 
-**Активность за последние 7 дней:**"""
+Активность за последние 7 дней:"""
         
         for day in weekly_stats:
             detailed += f"\n{day['date']}: {day['roasts']} подъёбов"
         
-        detailed += "\n\n**Топ-10 триггеров:**"
+        detailed += "\n\nТоп-10 триггеров:"
         for i, (trigger, count) in enumerate(top_triggers.items(), 1):
             detailed += f"\n{i}. '{trigger}' - {count} раз"
         

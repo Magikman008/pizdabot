@@ -47,7 +47,7 @@ for word, reply in russian_swear_triggers.items():
 async def show_stats(message: Message):
     """Показать общую статистику бота"""
     stats_text = bot_stats.get_stats_summary()
-    await message.answer(stats_text, parse_mode="Markdown")
+    await message.answer(stats_text)
 
 
 @commands_router.message(Command("top"))
@@ -58,11 +58,11 @@ async def show_top_triggers(message: Message):
         await message.answer("📊 Пока нет статистики по триггерам")
         return
     
-    text = "🏆 **Топ-10 триггеров:**\n\n"
+    text = "🏆 Топ-10 триггеров:\n\n"
     for i, (trigger, count) in enumerate(top.items(), 1):
         text += f"{i}. '{trigger}' - {count} раз\n"
     
-    await message.answer(text, parse_mode="Markdown")
+    await message.answer(text)
 
 
 @commands_router.message(Command("today"))
@@ -70,13 +70,13 @@ async def show_today_stats(message: Message):
     """Показать статистику за сегодня"""
     today = bot_stats.get_daily_stats()
     
-    text = f"""📅 **Статистика за сегодня ({today['date']})**
+    text = f"""📅 Статистика за сегодня ({today['date']})
 
 🔥 Подъёбов: {today['roasts']}
 👥 Пользователей: {today['unique_users']}
 💬 Групп: {today['unique_groups']}"""
     
-    await message.answer(text, parse_mode="Markdown")
+    await message.answer(text)
 
 
 # Админские команды
@@ -88,7 +88,7 @@ async def admin_stats(message: Message):
         return
     
     detailed_stats = bot_stats.get_detailed_stats()
-    await message.answer(detailed_stats, parse_mode="Markdown")
+    await message.answer(detailed_stats)
 
 
 @commands_router.message(Command("export_stats"))
@@ -125,34 +125,34 @@ async def clear_stats(message: Message):
         return
     
     bot_stats.clear_stats()
-    await message.answer("🗑️ **Статистика очищена!**\n\nВся статистика была сброшена до нуля.", parse_mode="Markdown")
+    await message.answer("🗑️ Статистика очищена!\n\nВся статистика была сброшена до нуля.")
 
 
 @commands_router.message(Command("help"))
 async def show_help(message: Message):
     """Показать список команд"""
-    help_text = """🤖 **Команды бота:**
+    help_text = """🤖 Команды бота:
 
-📊 **Статистика:**
+📊 Статистика:
 /stats - общая статистика
 /top - топ триггеров
 /today - статистика за сегодня
 /help - эта справка
 
-👑 **Админские команды:**
+👑 Админские команды:
 /admin_stats - детальная статистика
 /export_stats - экспорт в JSON
 /clear_stats - очистить статистику
 
 Просто пишите фразы, и я буду отвечать! 😄"""
     
-    await message.answer(help_text, parse_mode="Markdown")
+    await message.answer(help_text)
 
 
 @commands_router.message(Command("start"))
 async def start_command(message: Message):
     """Команда start для приветствия"""
-    welcome_text = """👋 **Добро пожаловать в PizdaBot!**
+    welcome_text = """👋 Добро пожаловать в PizdaBot!
 
 Я отвечаю на различные фразы забавными ответами.
 
@@ -160,7 +160,7 @@ async def start_command(message: Message):
 
 Просто напишите что-нибудь и посмотрите что получится! 😄"""
     
-    await message.answer(welcome_text, parse_mode="Markdown")
+    await message.answer(welcome_text)
 
 
 async def main():
