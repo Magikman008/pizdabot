@@ -79,12 +79,12 @@ async def show_today_stats(message: Message):
     await message.answer(text)
 
 
-# Админские команды
+# Админские команды (скрыты от обычных пользователей)
 @commands_router.message(Command("admin_stats"))
 async def admin_stats(message: Message):
     """Детальная статистика (только для админов)"""
     if not is_admin(message):
-        await message.answer("❌ У вас нет прав для выполнения этой команды")
+        # Не отвечаем обычным пользователям - скрываем команду
         return
     
     detailed_stats = bot_stats.get_detailed_stats()
@@ -95,7 +95,7 @@ async def admin_stats(message: Message):
 async def export_stats(message: Message):
     """Экспорт статистики в JSON файл (только для админов)"""
     if not is_admin(message):
-        await message.answer("❌ У вас нет прав для выполнения этой команды")
+        # Не отвечаем обычным пользователям - скрываем команду
         return
     
     try:
@@ -121,7 +121,7 @@ async def export_stats(message: Message):
 async def clear_stats(message: Message):
     """Очистить статистику (только для админов)"""
     if not is_admin(message):
-        await message.answer("❌ У вас нет прав для выполнения этой команды")
+        # Не отвечаем обычным пользователям - скрываем команду
         return
     
     bot_stats.clear_stats()
@@ -130,21 +130,27 @@ async def clear_stats(message: Message):
 
 @commands_router.message(Command("help"))
 async def show_help(message: Message):
-    """Показать список команд"""
+    """Показать список команд (разный для админов и обычных пользователей)"""
+    
+    # Обычные команды для всех
     help_text = """🤖 Команды бота:
 
 📊 Статистика:
 /stats - общая статистика
 /top - топ триггеров
 /today - статистика за сегодня
-/help - эта справка
+/help - эта справка"""
+    
+    # Для админов добавляем админские команды
+    if is_admin(message):
+        help_text += """
 
 👑 Админские команды:
 /admin_stats - детальная статистика
 /export_stats - экспорт в JSON
-/clear_stats - очистить статистику
-
-Просто пишите фразы, и я буду отвечать! 😄"""
+/clear_stats - очистить статистику"""
+    
+    help_text += "\n\nПросто пишите фразы, и я буду отвечать! 😄"
     
     await message.answer(help_text)
 
