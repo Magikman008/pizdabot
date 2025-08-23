@@ -1,6 +1,6 @@
 # project files
 /settings.py
-
+bot_stats.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
