@@ -28,7 +28,7 @@ def is_admin(message: Message) -> bool:
 
 for word, reply in russian_swear_triggers.items():
     # генерим регулярку: игнор регистра, допускаем знаки вокруг
-    pattern = re.compile(rf"^\W*{word}\W*$", re.IGNORECASE)
+    pattern = re.compile(rf".*\b{word}\b$", re.IGNORECASE)
 
     async def handler(message: Message, reply=reply, trigger=word):
         # Записываем статистику
@@ -57,11 +57,11 @@ async def show_top_triggers(message: Message):
     if not top:
         await message.answer("📊 Пока нет статистики по триггерам")
         return
-    
+
     text = "🏆 Топ-10 триггеров:\n\n"
     for i, (trigger, count) in enumerate(top.items(), 1):
         text += f"{i}. '{trigger}' - {count} раз\n"
-    
+
     await message.answer(text)
 
 
@@ -69,13 +69,13 @@ async def show_top_triggers(message: Message):
 async def show_today_stats(message: Message):
     """Показать статистику за сегодня"""
     today = bot_stats.get_daily_stats()
-    
+
     text = f"""📅 Статистика за сегодня ({today['date']})
 
 🔥 Подъёбов: {today['roasts']}
 👥 Пользователей: {today['unique_users']}
 💬 Групп: {today['unique_groups']}"""
-    
+
     await message.answer(text)
 
 
@@ -86,7 +86,7 @@ async def admin_stats(message: Message):
     if not is_admin(message):
         # Не отвечаем обычным пользователям - скрываем команду
         return
-    
+
     detailed_stats = bot_stats.get_detailed_stats()
     await message.answer(detailed_stats)
 
@@ -97,18 +97,18 @@ async def export_stats(message: Message):
     if not is_admin(message):
         # Не отвечаем обычным пользователям - скрываем команду
         return
-    
+
     try:
         stats_data = bot_stats.export_stats()
         json_data = json.dumps(stats_data, ensure_ascii=False, indent=2)
-        
+
         # Создаем файл в памяти
         file_buffer = BytesIO(json_data.encode('utf-8'))
         input_file = BufferedInputFile(
             file_buffer.getvalue(),
             filename="bot_stats_export.json"
         )
-        
+
         await message.answer_document(
             input_file,
             caption="📊 Экспорт статистики бота"
@@ -123,7 +123,7 @@ async def clear_stats(message: Message):
     if not is_admin(message):
         # Не отвечаем обычным пользователям - скрываем команду
         return
-    
+
     bot_stats.clear_stats()
     await message.answer("🗑️ Статистика очищена!\n\nВся статистика была сброшена до нуля.")
 
@@ -131,7 +131,7 @@ async def clear_stats(message: Message):
 @commands_router.message(Command("help"))
 async def show_help(message: Message):
     """Показать список команд (разный для админов и обычных пользователей)"""
-    
+
     # Обычные команды для всех
     help_text = """🤖 Команды бота:
 
@@ -140,7 +140,7 @@ async def show_help(message: Message):
 /top - топ триггеров
 /today - статистика за сегодня
 /help - эта справка"""
-    
+
     # Для админов добавляем админские команды
     if is_admin(message):
         help_text += """
@@ -149,9 +149,9 @@ async def show_help(message: Message):
 /admin_stats - детальная статистика
 /export_stats - экспорт в JSON
 /clear_stats - очистить статистику"""
-    
+
     help_text += "\n\nПросто пишите фразы, и я буду отвечать! 😄"
-    
+
     await message.answer(help_text)
 
 
@@ -165,7 +165,7 @@ async def start_command(message: Message):
 📋 Используйте /help чтобы посмотреть все команды.
 
 Просто напишите что-нибудь и посмотрите что получится! 😄"""
-    
+
     await message.answer(welcome_text)
 
 
