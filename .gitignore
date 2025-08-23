@@ -1,6 +1,8 @@
 # project files
 /settings.py
 bot_stats.json
+user_triggers.json
+chat_settings.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
