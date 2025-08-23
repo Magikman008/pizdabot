@@ -26,20 +26,42 @@ def is_admin(message: Message) -> bool:
     return message.from_user.username in ADMIN_USERNAMES
 
 
-for word, reply in russian_swear_triggers.items():
-    # генерим регулярку: игнор регистра, допускаем знаки вокруг
-    pattern = re.compile(rf"^\W*{word}\W*$", re.IGNORECASE)
-
-    async def handler(message: Message, reply=reply, trigger=word):
-        # Записываем статистику
-        bot_stats.add_roast(
-            user_id=message.from_user.id,
-            chat_id=message.chat.id,
-            trigger=trigger
-        )
-        await message.answer(reply)
-
-    triggers_router.message(F.text.regexp(pattern))(handler)
+# Обработчик для всех текстовых сообщений
+@triggers_router.message(F.text)
+async def handle_triggers(message: Message):
+    """
+    Обработка триггеров в конце сообщений
+    Ищет триггеры из triggers.py в конце входящих сообщений
+    """
+    if not message.text:
+        return
+    
+    # Приводим сообщение к нижнему регистру для поиска
+    text = message.text.lower().strip()
+    
+    # Убираем знаки препинания в конце
+    text = text.rstrip('.,!?;:')
+    
+    # Ищем триггеры, которые заканчивают сообщение
+    # Сортируем триггеры по убыванию длины (сначала более длинные)
+    sorted_triggers = sorted(russian_swear_triggers.items(), key=lambda x: len(x[0]), reverse=True)
+    
+    for trigger, response in sorted_triggers:
+        trigger_lower = trigger.lower()
+        
+        # Проверяем, заканчивается ли сообщение этим триггером
+        if text.endswith(trigger_lower):
+            # Дополнительная проверка: триггер должен быть отдельным словом/фразой
+            # (не частью другого слова)
+            if len(text) == len(trigger_lower) or text[-(len(trigger_lower) + 1)] in ' .,!?;:':
+                # Записываем статистику
+                bot_stats.add_roast(
+                    user_id=message.from_user.id,
+                    chat_id=message.chat.id,
+                    trigger=trigger
+                )
+                await message.answer(response)
+                return  # Отвечаем только на первый найденный триггер
 
 
 # Команды статистики
