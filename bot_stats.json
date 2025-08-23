@@ -1,0 +1,25 @@
+{
+  "total_roasts": 2,
+  "unique_users": [
+    5128641039
+  ],
+  "unique_groups": [
+    -4641393924
+  ],
+  "daily_stats": {
+    "2025-08-23": {
+      "roasts": 2,
+      "users": [
+        5128641039
+      ],
+      "groups": [
+        -4641393924
+      ]
+    }
+  },
+  "trigger_stats": {
+    "да": 1,
+    "нет": 1
+  },
+  "start_date": "2025-08-23T18:37:49.108726"
+}
