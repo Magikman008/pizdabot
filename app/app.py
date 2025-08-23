@@ -15,7 +15,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 bot = Bot(token=settings.token)
 dp = Dispatcher()
-start_router = Router()
+commands_router = Router()  # Роутер для команд
+triggers_router = Router()  # Роутер для триггеров
 
 # Список администраторов по username
 ADMIN_USERNAMES = ['dunda2', 'window_exit']
@@ -38,18 +39,18 @@ for word, reply in russian_swear_triggers.items():
         )
         await message.answer(reply)
 
-    start_router.message(F.text.regexp(pattern))(handler)
+    triggers_router.message(F.text.regexp(pattern))(handler)
 
 
 # Команды статистики
-@start_router.message(Command("stats"))
+@commands_router.message(Command("stats"))
 async def show_stats(message: Message):
     """Показать общую статистику бота"""
     stats_text = bot_stats.get_stats_summary()
     await message.answer(stats_text, parse_mode="Markdown")
 
 
-@start_router.message(Command("top"))
+@commands_router.message(Command("top"))
 async def show_top_triggers(message: Message):
     """Показать топ триггеров"""
     top = bot_stats.get_top_triggers(10)
@@ -64,7 +65,7 @@ async def show_top_triggers(message: Message):
     await message.answer(text, parse_mode="Markdown")
 
 
-@start_router.message(Command("today"))
+@commands_router.message(Command("today"))
 async def show_today_stats(message: Message):
     """Показать статистику за сегодня"""
     today = bot_stats.get_daily_stats()
@@ -79,7 +80,7 @@ async def show_today_stats(message: Message):
 
 
 # Админские команды
-@start_router.message(Command("admin_stats"))
+@commands_router.message(Command("admin_stats"))
 async def admin_stats(message: Message):
     """Детальная статистика (только для админов)"""
     if not is_admin(message):
@@ -90,7 +91,7 @@ async def admin_stats(message: Message):
     await message.answer(detailed_stats, parse_mode="Markdown")
 
 
-@start_router.message(Command("export_stats"))
+@commands_router.message(Command("export_stats"))
 async def export_stats(message: Message):
     """Экспорт статистики в JSON файл (только для админов)"""
     if not is_admin(message):
@@ -116,7 +117,7 @@ async def export_stats(message: Message):
         await message.answer(f"❌ Ошибка при экспорте: {str(e)}")
 
 
-@start_router.message(Command("clear_stats"))
+@commands_router.message(Command("clear_stats"))
 async def clear_stats(message: Message):
     """Очистить статистику (только для админов)"""
     if not is_admin(message):
@@ -127,7 +128,7 @@ async def clear_stats(message: Message):
     await message.answer("🗑️ **Статистика очищена!**\n\nВся статистика была сброшена до нуля.", parse_mode="Markdown")
 
 
-@start_router.message(Command("help"))
+@commands_router.message(Command("help"))
 async def show_help(message: Message):
     """Показать список команд"""
     help_text = """🤖 **Команды бота:**
@@ -148,6 +149,22 @@ async def show_help(message: Message):
     await message.answer(help_text, parse_mode="Markdown")
 
 
+@commands_router.message(Command("start"))
+async def start_command(message: Message):
+    """Команда start для приветствия"""
+    welcome_text = """👋 **Добро пожаловать в PizdaBot!**
+
+Я отвечаю на различные фразы забавными ответами.
+
+📋 Используйте /help чтобы посмотреть все команды.
+
+Просто напишите что-нибудь и посмотрите что получится! 😄"""
+    
+    await message.answer(welcome_text, parse_mode="Markdown")
+
+
 async def main():
-    dp.include_router(start_router)
+    # Подключаем роутеры в правильном порядке
+    dp.include_router(commands_router)  # Команды первыми
+    dp.include_router(triggers_router)  # Триггеры вторыми
     await dp.start_polling(bot)
