@@ -24,23 +24,38 @@ class BotStatistics:
         """Загрузка статистики из файла"""
         if not os.path.exists(self.stats_file):
             return {
-                "total_roasts": 0,  # Общее количество подъёбов
-                "unique_users": set(),  # Уникальные пользователи
-                "unique_groups": set(),  # Уникальные группы
-                "daily_stats": {},  # Статистика по дням
-                "trigger_stats": {},  # Статистика по триггерам
+                "total_roasts": 0,
+                "unique_users": set(),
+                "unique_groups": set(),
+                "daily_stats": {},
+                "trigger_stats": {},
                 "start_date": datetime.now().isoformat()
             }
 
         try:
             with open(self.stats_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                # Преобразуем списки обратно в множества для уникальных значений
-                data["unique_users"] = set(data.get("unique_users", []))
-                data["unique_groups"] = set(data.get("unique_groups", []))
-                return data
+            # top-level множества
+            data["unique_users"] = set(data.get("unique_users", []))
+            data["unique_groups"] = set(data.get("unique_groups", []))
+            # Конвертируем вложенные списки daily_stats → множества
+            for date, day in data.get("daily_stats", {}).items():
+                if isinstance(day.get("users"), list):
+                    day["users"] = set(day["users"])
+                if isinstance(day.get("groups"), list):
+                    day["groups"] = set(day["groups"])
+            return data
+
         except (json.JSONDecodeError, FileNotFoundError):
-            return self._load_stats()  # Возвращаем пустую статистику при ошибке
+            # при ошибке возвращаем новую пустую статистику
+            return {
+                "total_roasts": 0,
+                "unique_users": set(),
+                "unique_groups": set(),
+                "daily_stats": {},
+                "trigger_stats": {},
+                "start_date": datetime.now().isoformat()
+            }
 
     def _save_stats(self):
         """Сохранение статистики в файл"""
