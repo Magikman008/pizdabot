@@ -3,6 +3,7 @@
 bot_stats.json
 user_triggers.json
 chat_settings.json
+subscriptions.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
