@@ -94,9 +94,9 @@ class BotStatistics:
             }
 
         self.stats["daily_stats"][today]["roasts"] += 1
-        self.stats["daily_stats"][today]["users"].append(user_id)
+        self.stats["daily_stats"][today]["users"].add(user_id)
         if chat_id != user_id:
-            self.stats["daily_stats"][today]["groups"].append(chat_id)
+            self.stats["daily_stats"][today]["groups"].add(chat_id)
 
         # Статистика по триггерам
         if trigger not in self.stats["trigger_stats"]:
