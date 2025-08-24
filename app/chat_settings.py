@@ -38,10 +38,15 @@ class ChatSettingsManager:
     def _save_settings(self):
         """Сохранение настроек в файл"""
         try:
+            # Создаем директорию если её нет
+            os.makedirs(os.path.dirname(self.settings_file) if os.path.dirname(
+                self.settings_file) else '.', exist_ok=True)
+
             with open(self.settings_file, 'w', encoding='utf-8') as f:
                 json.dump(self.data, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"Ошибка сохранения настроек чата: {e}")
+            print(f"КРИТИЧЕСКАЯ ОШИБКА: Не удается сохранить настройки чата: {e}")
+            # Можно добавить fallback-логику или использовать временную директорию
 
     def _get_chat_settings(self, chat_id: int) -> Dict[str, Any]:
         """Получить настройки чата"""
