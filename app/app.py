@@ -4,8 +4,6 @@ from app.controllers import subscription_manager
 from app.handlers import router
 
 
-
-
 async def main():
     dp.include_router(router)
 
