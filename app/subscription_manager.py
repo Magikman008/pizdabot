@@ -6,7 +6,8 @@
 import json
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Tuple
+
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -33,17 +34,21 @@ class SubscriptionManager:
         if not os.path.exists(self.subscriptions_file):
             return {
                 "subscriptions": {},  # Подписки по пользователям
-                "transactions": {},   # История транзакций
-                "version": "1.0"
+                "transactions": {},  # История транзакций
+                "version": "1.0",
             }
 
         try:
-            with open(self.subscriptions_file, 'r', encoding='utf-8') as f:
+            with open(self.subscriptions_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 # Конвертируем даты обратно в datetime объекты
                 for user_id, sub_data in data.get("subscriptions", {}).items():
-                    if "expires_at" in sub_data and isinstance(sub_data["expires_at"], str):
-                        sub_data["expires_at"] = datetime.fromisoformat(sub_data["expires_at"])
+                    if "expires_at" in sub_data and isinstance(
+                        sub_data["expires_at"], str
+                    ):
+                        sub_data["expires_at"] = datetime.fromisoformat(
+                            sub_data["expires_at"]
+                        )
                 return data
         except (json.JSONDecodeError, FileNotFoundError):
             return self._load_subscriptions()  # Возвращаем пустую структуру при ошибке
@@ -57,20 +62,22 @@ class SubscriptionManager:
             to_save = {
                 "subscriptions": {},
                 "transactions": self.data.get("transactions", {}),
-                "version": "1.0"
+                "version": "1.0",
             }
             for uid, sub in self.data.get("subscriptions", {}).items():
                 copy_sub = sub.copy()
                 # Преобразуем datetime в строки ISO
-                if "activated_at" in copy_sub and isinstance(copy_sub["activated_at"],
-                                                             datetime):
+                if "activated_at" in copy_sub and isinstance(
+                    copy_sub["activated_at"], datetime
+                ):
                     copy_sub["activated_at"] = copy_sub["activated_at"].isoformat()
-                if "expires_at" in copy_sub and isinstance(copy_sub["expires_at"],
-                                                           datetime):
+                if "expires_at" in copy_sub and isinstance(
+                    copy_sub["expires_at"], datetime
+                ):
                     copy_sub["expires_at"] = copy_sub["expires_at"].isoformat()
                 to_save["subscriptions"][uid] = copy_sub
 
-            with open(self.subscriptions_file, 'w', encoding='utf-8') as f:
+            with open(self.subscriptions_file, "w", encoding="utf-8") as f:
                 json.dump(to_save, f, ensure_ascii=False, indent=2)
 
             print(f"DEBUG: Подписки успешно сохранены в {self.subscriptions_file}")
@@ -141,7 +148,9 @@ class SubscriptionManager:
 ⏰ Осталось дней: {days_left}
 🎯 Статус: Премиум-пользователь"""
 
-    def activate_subscription(self, user_id: int, transaction_id: str = None) -> Tuple[bool, str]:
+    def activate_subscription(
+        self, user_id: int, transaction_id: str = None
+    ) -> Tuple[bool, str]:
         """
         Активировать подписку пользователя
 
@@ -160,7 +169,9 @@ class SubscriptionManager:
             current_expiry = self.data["subscriptions"][user_str]["expires_at"]
             if isinstance(current_expiry, str):
                 current_expiry = datetime.fromisoformat(current_expiry)
-            new_expiry = current_expiry + timedelta(days=self.SUBSCRIPTION_DURATION_DAYS)
+            new_expiry = current_expiry + timedelta(
+                days=self.SUBSCRIPTION_DURATION_DAYS
+            )
         else:
             new_expiry = now + timedelta(days=self.SUBSCRIPTION_DURATION_DAYS)
 
@@ -170,7 +181,7 @@ class SubscriptionManager:
             "activated_at": now,
             "expires_at": new_expiry,
             "transaction_id": transaction_id,
-            "price_stars": self.SUBSCRIPTION_PRICE_STARS
+            "price_stars": self.SUBSCRIPTION_PRICE_STARS,
         }
 
         # Сохраняем транзакцию
@@ -179,18 +190,21 @@ class SubscriptionManager:
                 "user_id": user_id,
                 "amount_stars": self.SUBSCRIPTION_PRICE_STARS,
                 "timestamp": now.isoformat(),
-                "type": "subscription_purchase"
+                "type": "subscription_purchase",
             }
 
         self._save_subscriptions()
 
-        return True, f"""✅ **Подписка активирована!**
+        return (
+            True,
+            f"""✅ **Подписка активирована!**
 
 ⭐ Оплачено: {self.SUBSCRIPTION_PRICE_STARS} звёздочка
 📅 Действует до: {new_expiry.strftime('%d.%m.%Y %H:%M')}
 🎯 Статус: Премиум-пользователь
 
-🚀 Теперь вам доступны все премиум-функции бота!"""
+🚀 Теперь вам доступны все премиум-функции бота!""",
+        )
 
     def create_subscription_keyboard(self) -> InlineKeyboardMarkup:
         """
@@ -205,13 +219,12 @@ class SubscriptionManager:
         # Кнопка покупки подписки за звёздочки
         buy_button = InlineKeyboardButton(
             text=f"⭐ Купить подписку за {self.SUBSCRIPTION_PRICE_STARS} звёздочку",
-            callback_data=f"buy_subscription:{self.SUBSCRIPTION_PRICE_STARS}"
+            callback_data=f"buy_subscription:{self.SUBSCRIPTION_PRICE_STARS}",
         )
 
         # Кнопка информации
         info_button = InlineKeyboardButton(
-            text="ℹ️ Информация о подписке",
-            callback_data="subscription_info"
+            text="ℹ️ Информация о подписке", callback_data="subscription_info"
         )
 
         # Добавляем кнопки (каждая в своем ряду)
@@ -253,7 +266,7 @@ class SubscriptionManager:
             "Приоритетная обработка",
             "Расширенная статистика",
             "Эксклюзивные команды",
-            "Техническая поддержка"
+            "Техническая поддержка",
         ]
 
     def cleanup_expired_subscriptions(self) -> int:

@@ -1,5 +1,0 @@
-# Настройки бота
-# Скопируйте этот файл в settings.py и укажите ваш токен бота
-
-# Токен бота от @BotFather
-token = "YOUR_BOT_TOKEN_HERE"

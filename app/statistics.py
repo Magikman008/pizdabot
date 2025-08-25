@@ -6,7 +6,7 @@
 import json
 import os
 from datetime import datetime
-from typing import Dict, Any, Set
+from typing import Dict, Any
 
 
 class BotStatistics:
@@ -29,11 +29,11 @@ class BotStatistics:
                 "unique_groups": set(),
                 "daily_stats": {},
                 "trigger_stats": {},
-                "start_date": datetime.now().isoformat()
+                "start_date": datetime.now().isoformat(),
             }
 
         try:
-            with open(self.stats_file, 'r', encoding='utf-8') as f:
+            with open(self.stats_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             # top-level множества
             data["unique_users"] = set(data.get("unique_users", []))
@@ -54,7 +54,7 @@ class BotStatistics:
                 "unique_groups": set(),
                 "daily_stats": {},
                 "trigger_stats": {},
-                "start_date": datetime.now().isoformat()
+                "start_date": datetime.now().isoformat(),
             }
 
     def _save_stats(self):
@@ -75,7 +75,7 @@ class BotStatistics:
         data_to_save["daily_stats"] = daily_stats_copy
 
         try:
-            with open(self.stats_file, 'w', encoding='utf-8') as f:
+            with open(self.stats_file, "w", encoding="utf-8") as f:
                 json.dump(data_to_save, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Ошибка сохранения статистики: {e}")
@@ -105,7 +105,7 @@ class BotStatistics:
             self.stats["daily_stats"][today] = {
                 "roasts": 0,
                 "users": set(),
-                "groups": set()
+                "groups": set(),
             }
 
         self.stats["daily_stats"][today]["roasts"] += 1
@@ -128,13 +128,15 @@ class BotStatistics:
             "unique_users": len(self.stats["unique_users"]),
             "unique_groups": len(self.stats["unique_groups"]),
             "days_active": len(self.stats["daily_stats"]),
-            "start_date": self.stats["start_date"]
+            "start_date": self.stats["start_date"],
         }
 
     def get_top_triggers(self, limit: int = 10) -> Dict[str, int]:
         """Получить топ триггеров"""
         trigger_stats = self.stats.get("trigger_stats", {})
-        sorted_triggers = sorted(trigger_stats.items(), key=lambda x: x[1], reverse=True)
+        sorted_triggers = sorted(
+            trigger_stats.items(), key=lambda x: x[1], reverse=True
+        )
         return dict(sorted_triggers[:limit])
 
     def get_daily_stats(self, date: str = None) -> Dict[str, Any]:
@@ -147,17 +149,15 @@ class BotStatistics:
         if date is None:
             date = datetime.now().strftime("%Y-%m-%d")
 
-        daily_data = self.stats["daily_stats"].get(date, {
-            "roasts": 0,
-            "users": set(),
-            "groups": set()
-        })
+        daily_data = self.stats["daily_stats"].get(
+            date, {"roasts": 0, "users": set(), "groups": set()}
+        )
 
         return {
             "date": date,
             "roasts": daily_data.get("roasts", 0),
             "unique_users": len(daily_data.get("users", set())),
-            "unique_groups": len(daily_data.get("groups", set()))
+            "unique_groups": len(daily_data.get("groups", set())),
         }
 
     def get_stats_summary(self) -> str:
@@ -195,6 +195,7 @@ class BotStatistics:
         weekly_stats = []
         for i in range(7):
             from datetime import timedelta
+
             date = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
             day_stats = self.get_daily_stats(date)
             weekly_stats.append(day_stats)
@@ -226,7 +227,7 @@ class BotStatistics:
             "unique_groups": set(),
             "daily_stats": {},
             "trigger_stats": {},
-            "start_date": datetime.now().isoformat()
+            "start_date": datetime.now().isoformat(),
         }
         self._save_stats()
 
@@ -242,7 +243,7 @@ class BotStatistics:
             daily_stats_export[date] = {
                 "roasts": day_data.get("roasts", 0),
                 "users": list(day_data.get("users", set())),
-                "groups": list(day_data.get("groups", set()))
+                "groups": list(day_data.get("groups", set())),
             }
         data_to_export["daily_stats"] = daily_stats_export
 

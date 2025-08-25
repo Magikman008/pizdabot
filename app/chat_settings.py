@@ -5,9 +5,9 @@
 
 import json
 import os
-from datetime import datetime
-from typing import Dict, Any, Optional
 import random
+from datetime import datetime
+from typing import Dict, Any
 
 
 class ChatSettingsManager:
@@ -24,13 +24,10 @@ class ChatSettingsManager:
     def _load_settings(self) -> Dict[str, Any]:
         """Загрузка настроек из файла"""
         if not os.path.exists(self.settings_file):
-            return {
-                "chats": {},  # Настройки по чатам
-                "version": "1.0"
-            }
+            return {"chats": {}, "version": "1.0"}  # Настройки по чатам
 
         try:
-            with open(self.settings_file, 'r', encoding='utf-8') as f:
+            with open(self.settings_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, FileNotFoundError):
             return self._load_settings()  # Возвращаем пустую структуру при ошибке
@@ -39,10 +36,16 @@ class ChatSettingsManager:
         """Сохранение настроек в файл"""
         try:
             # Создаем директорию если её нет
-            os.makedirs(os.path.dirname(self.settings_file) if os.path.dirname(
-                self.settings_file) else '.', exist_ok=True)
+            os.makedirs(
+                (
+                    os.path.dirname(self.settings_file)
+                    if os.path.dirname(self.settings_file)
+                    else "."
+                ),
+                exist_ok=True,
+            )
 
-            with open(self.settings_file, 'w', encoding='utf-8') as f:
+            with open(self.settings_file, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"КРИТИЧЕСКАЯ ОШИБКА: Не удается сохранить настройки чата: {e}")
@@ -58,7 +61,7 @@ class ChatSettingsManager:
                 "enabled": True,  # Бот включен по умолчанию
                 "response_chance": 100,  # 100% вероятность ответа
                 "last_modified": datetime.now().isoformat(),
-                "modified_by": None
+                "modified_by": None,
             }
             self.data["chats"][chat_str] = default_settings
             self._save_settings()
@@ -70,8 +73,9 @@ class ChatSettingsManager:
         settings = self._get_chat_settings(chat_id)
         return settings.get("enabled", True)
 
-    def set_bot_enabled(self, chat_id: int, enabled: bool, user_id: int) -> tuple[
-        bool, str]:
+    def set_bot_enabled(
+        self, chat_id: int, enabled: bool, user_id: int
+    ) -> tuple[bool, str]:
         """
         Включить/выключить бота в чате
 
@@ -103,8 +107,9 @@ class ChatSettingsManager:
         settings = self._get_chat_settings(chat_id)
         return settings.get("response_chance", 100)
 
-    def set_response_chance(self, chat_id: int, chance: int, user_id: int) -> tuple[
-        bool, str]:
+    def set_response_chance(
+        self, chat_id: int, chance: int, user_id: int
+    ) -> tuple[bool, str]:
         """
         Установить вероятность ответа бота
 
@@ -191,7 +196,7 @@ class ChatSettingsManager:
             "enabled": True,
             "response_chance": 100,
             "last_modified": datetime.now().isoformat(),
-            "modified_by": user_id
+            "modified_by": user_id,
         }
 
         self.data["chats"][chat_str] = default_settings

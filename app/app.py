@@ -1,27 +1,31 @@
 # Исправленный app.py с корректным экранированием MarkdownV2
 
+import json
 import logging
 import re
-import json
 from io import BytesIO
-from typing import Any
-
-from Tools.i18n.pygettext import escape_ascii
-from aiogram import Bot, Dispatcher, F, Router
-from aiogram.types import Message, BufferedInputFile, CallbackQuery, \
-    InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice, PreCheckoutQuery
-from aiogram.filters import Command
-from aiogram import exceptions
 
 import settings
-from triggers import russian_swear_triggers
-from app.statistics import bot_stats
-from app.user_triggers import user_trigger_manager
-from app.chat_settings import chat_settings_manager
-from app.subscription_manager import subscription_manager
+from Tools.i18n.pygettext import escape_ascii
+from aiogram import Bot, Dispatcher, F, Router
+from aiogram.filters import Command
+from aiogram.types import (
+    Message,
+    BufferedInputFile,
+    CallbackQuery,
+    LabeledPrice,
+    PreCheckoutQuery,
+)
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+from app.chat_settings import chat_settings_manager
+from app.statistics import bot_stats
+from app.subscription_manager import subscription_manager
+from app.user_triggers import user_trigger_manager
+from triggers import russian_swear_triggers
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 bot = Bot(token=settings.token)
 dp = Dispatcher()
@@ -31,7 +35,7 @@ callback_router = Router()  # Роутер для callback запросов
 payment_router = Router()  # Роутер для платежей
 
 # Список администраторов по username
-ADMIN_USERNAMES = ['dunda2', 'window_exit']
+ADMIN_USERNAMES = ["dunda2", "window_exit"]
 
 
 def escape_markdown(text: str) -> str:
@@ -40,18 +44,14 @@ def escape_markdown(text: str) -> str:
     которые Telegram считает специальными в MarkdownV2.
     """
     # Список всех спецсимволов MarkdownV2
-    special_chars = r'\[]()~`_<>#+-=|{}.!'
+    special_chars = r"\[]()~`_<>#+-=|{}.!"
     # Экранируем каждый спецсимвол обратным слешем
-    return ''.join(f'\\{ch}' if ch in special_chars else ch for ch in text)
+    return "".join(f"\\{ch}" if ch in special_chars else ch for ch in text)
 
 
 def is_admin(message: Message) -> bool:
     """Проверка, является ли пользователь администратором"""
     return message.from_user.username in ADMIN_USERNAMES
-
-
-
-
 
 
 def has_premium_access(user_id: int) -> bool:
@@ -77,7 +77,7 @@ async def handle_triggers(message: Message):
     text = message.text.lower().strip()
 
     # Убираем знаки препинания в конце
-    text = text.rstrip('.,!?;:')
+    text = text.rstrip(".,!?;:")
 
     # СНАЧАЛА проверяем пользовательские триггеры (они имеют приоритет)
     user_response = user_trigger_manager.get_response(message.chat.id, text)
@@ -87,8 +87,9 @@ async def handle_triggers(message: Message):
 
     # Если пользовательские триггеры не сработали, проверяем глобальные
     # Сортируем триггеры по убыванию длины (сначала более длинные)
-    sorted_triggers = sorted(russian_swear_triggers.items(), key=lambda x: len(x[0]),
-                             reverse=True)
+    sorted_triggers = sorted(
+        russian_swear_triggers.items(), key=lambda x: len(x[0]), reverse=True
+    )
 
     for trigger, response in sorted_triggers:
         trigger_lower = trigger.lower()
@@ -97,22 +98,24 @@ async def handle_triggers(message: Message):
         if text.endswith(trigger_lower):
             # Дополнительная проверка: триггер должен быть отдельным словом/фразой
             # (не частью другого слова)
-            if len(text) == len(trigger_lower) or text[
-                -(len(trigger_lower) + 1)] in ' .,!?;:':
+            if (
+                len(text) == len(trigger_lower)
+                or text[-(len(trigger_lower) + 1)] in " .,!?;:"
+            ):
                 # Записываем статистику
                 bot_stats.add_roast(
                     user_id=message.from_user.id,
                     chat_id=message.chat.id,
-                    trigger=trigger
+                    trigger=trigger,
                 )
                 await message.answer(response)
                 return  # Отвечаем только на первый найденный триггер
 
 
-
 # =========================
 # ПОДПИСКИ ЧЕРЕЗ TELEGRAM STARS
 # =========================
+
 
 @commands_router.message(Command("sub"))
 async def show_subscription_info(message: Message):
@@ -120,7 +123,9 @@ async def show_subscription_info(message: Message):
     description = subscription_manager.get_subscription_description()
     keyboard = subscription_manager.create_subscription_keyboard()
 
-    await message.answer(escape_markdown(description), reply_markup=keyboard, parse_mode="MarkdownV2")
+    await message.answer(
+        escape_markdown(description), reply_markup=keyboard, parse_mode="MarkdownV2"
+    )
 
 
 @callback_router.callback_query(F.data.startswith("buy_subscription:"))
@@ -156,14 +161,14 @@ async def process_subscription_purchase(callback: CallbackQuery):
 
         await callback.message.answer(
             "💫 Инвойс для оплаты отправлен\\! Проверьте личные сообщения с ботом\\.",
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
 
     except Exception as e:
         logger.error(f"Ошибка при создании инвойса: {e}")
         await callback.message.answer(
             "❌ Произошла ошибка при создании платежа\\. Попробуйте позже\\.",
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
 
 
@@ -183,10 +188,7 @@ async def pre_checkout_query_handler(pre_checkout_query: PreCheckoutQuery):
     if pre_checkout_query.invoice_payload.startswith("subscription:"):
         await pre_checkout_query.answer(ok=True)
     else:
-        await pre_checkout_query.answer(
-            ok=False,
-            error_message="Неверный тип платежа"
-        )
+        await pre_checkout_query.answer(ok=False, error_message="Неверный тип платежа")
 
 
 @payment_router.message(F.successful_payment)
@@ -202,8 +204,7 @@ async def successful_payment_handler(message: Message):
 
             # Активируем подписку
             success, msg = subscription_manager.activate_subscription(
-                user_id=user_id,
-                transaction_id=payment.telegram_payment_charge_id
+                user_id=user_id, transaction_id=payment.telegram_payment_charge_id
             )
 
             if success:
@@ -220,12 +221,14 @@ async def successful_payment_handler(message: Message):
             else:
                 await message.answer(
                     "❌ Ошибка при активации подписки\\. Обратитесь к администратору\\.",
-                    parse_mode="MarkdownV2")
+                    parse_mode="MarkdownV2",
+                )
 
         except Exception as e:
             logger.error(f"Ошибка при обработке платежа: {e}")
-            await message.answer("❌ Произошла ошибка при обработке платежа\\.",
-                                 parse_mode="MarkdownV2")
+            await message.answer(
+                "❌ Произошла ошибка при обработке платежа\\.", parse_mode="MarkdownV2"
+            )
 
 
 @commands_router.message(Command("premium"))
@@ -235,7 +238,7 @@ async def premium_command(message: Message):
         await message.answer(
             "⭐ *Эта команда доступна только премиум\\-пользователям\\!*\n\n"
             "Используйте /sub для покупки подписки\\.",
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
         return
 
@@ -258,13 +261,12 @@ async def premium_command(message: Message):
 # КОМАНДЫ УПРАВЛЕНИЯ БОТОМ В ЧАТЕ
 # =========================
 
+
 @commands_router.message(Command("off"))
 async def turn_bot_off(message: Message):
     """Выключить бота в чате"""
     success, msg = chat_settings_manager.set_bot_enabled(
-        chat_id=message.chat.id,
-        enabled=False,
-        user_id=message.from_user.id
+        chat_id=message.chat.id, enabled=False, user_id=message.from_user.id
     )
     escaped_msg = escape_markdown(msg)
     await message.answer(escaped_msg, parse_mode="MarkdownV2")
@@ -274,9 +276,7 @@ async def turn_bot_off(message: Message):
 async def turn_bot_on(message: Message):
     """Включить бота в чате"""
     success, msg = chat_settings_manager.set_bot_enabled(
-        chat_id=message.chat.id,
-        enabled=True,
-        user_id=message.from_user.id
+        chat_id=message.chat.id, enabled=True, user_id=message.from_user.id
     )
     escaped_msg = escape_markdown(msg)
     await message.answer(escaped_msg, parse_mode="MarkdownV2")
@@ -289,32 +289,31 @@ async def set_response_chance(message: Message):
         return
 
     # Парсим команду для извлечения числа
-    pattern = r'/chance\s+(\d+)'
+    pattern = r"/chance\s+(\d+)"
     match = re.match(pattern, message.text)
 
     if not match:
         await message.answer(
-            '❌ *Неправильный формат команды\\!*\n\n'
-            'Используйте: `/chance <число от 0 до 100>`\n'
-            '*Примеры:*\n'
-            '`/chance 50` \\- бот отвечает в 50% случаев\n'
-            '`/chance 0` \\- бот не отвечает\n'
-            '`/chance 100` \\- бот отвечает всегда',
-            parse_mode="MarkdownV2"
+            "❌ *Неправильный формат команды\\!*\n\n"
+            "Используйте: `/chance <число от 0 до 100>`\n"
+            "*Примеры:*\n"
+            "`/chance 50` \\- бот отвечает в 50% случаев\n"
+            "`/chance 0` \\- бот не отвечает\n"
+            "`/chance 100` \\- бот отвечает всегда",
+            parse_mode="MarkdownV2",
         )
         return
 
     try:
         chance = int(match.group(1))
     except ValueError:
-        await message.answer("❌ Введите корректное число от 0 до 100\\!",
-                             parse_mode="MarkdownV2")
+        await message.answer(
+            "❌ Введите корректное число от 0 до 100\\!", parse_mode="MarkdownV2"
+        )
         return
 
     success, msg = chat_settings_manager.set_response_chance(
-        chat_id=message.chat.id,
-        chance=chance,
-        user_id=message.from_user.id
+        chat_id=message.chat.id, chance=chance, user_id=message.from_user.id
     )
     escaped_msg = escape_markdown(msg)
     await message.answer(escaped_msg, parse_mode="MarkdownV2")
@@ -332,13 +331,13 @@ async def show_chat_settings(message: Message):
 async def reset_chat_settings(message: Message):
     """Сбросить настройки чата (только админы)"""
     if not is_admin(message):
-        await message.answer("❌ Эта команда доступна только администраторам\\!",
-                             parse_mode="MarkdownV2")
+        await message.answer(
+            "❌ Эта команда доступна только администраторам\\!", parse_mode="MarkdownV2"
+        )
         return
 
     success, msg = chat_settings_manager.reset_chat_settings(
-        chat_id=message.chat.id,
-        user_id=message.from_user.id
+        chat_id=message.chat.id, user_id=message.from_user.id
     )
     escaped_msg = escape_markdown(msg)
     await message.answer(escaped_msg, parse_mode="MarkdownV2")
@@ -347,6 +346,7 @@ async def reset_chat_settings(message: Message):
 # =========================
 # КОМАНДЫ ПОЛЬЗОВАТЕЛЬСКИХ ТРИГГЕРОВ
 # =========================
+
 
 @commands_router.message(Command("add"))
 async def add_trigger(message: Message):
@@ -361,7 +361,7 @@ async def add_trigger(message: Message):
             "⭐ *Добавление триггеров доступно только подписчикам\\!*\n\n"
             f"Купите премиум\\-подписку за {subscription_manager.SUBSCRIPTION_PRICE_STARS} звёздочку чтобы добавлять свои триггеры:",
             reply_markup=keyboard,
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
         return
 
@@ -375,10 +375,10 @@ async def add_trigger(message: Message):
 
     if not match:
         await message.answer(
-            '❌ *Неправильный формат команды\\!*\n\n'
+            "❌ *Неправильный формат команды\\!*\n\n"
             'Используйте: `/add "фраза" "ответ"`\n'
             'Пример: `/add "привет" "и тебе привет!"`',
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
         return
 
@@ -388,7 +388,7 @@ async def add_trigger(message: Message):
         user_id=message.from_user.id,
         chat_id=message.chat.id,
         trigger=trigger,
-        response=response
+        response=response,
     )
 
     # Добавляем информацию о премиум-статусе
@@ -411,10 +411,10 @@ async def remove_trigger(message: Message):
 
     if not match:
         await message.answer(
-            '❌ *Неправильный формат команды\\!*\n\n'
+            "❌ *Неправильный формат команды\\!*\n\n"
             'Используйте: `/remove "фраза"`\n'
             'Пример: `/remove "привет"`',
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
         return
 
@@ -424,7 +424,7 @@ async def remove_trigger(message: Message):
         user_id=message.from_user.id,
         chat_id=message.chat.id,
         trigger=trigger,
-        is_admin=is_admin(message)
+        is_admin=is_admin(message),
     )
 
     escaped_msg = escape_markdown(msg)
@@ -448,7 +448,7 @@ async def my_triggers_stats(message: Message):
             "⭐ *Статистика триггеров доступна только подписчикам\\!*\n\n"
             f"Купите премиум\\-подписку за {subscription_manager.SUBSCRIPTION_PRICE_STARS} звёздочку:",
             reply_markup=keyboard,
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
         return
 
@@ -465,6 +465,7 @@ async def my_triggers_stats(message: Message):
 # КОМАНДЫ СТАТИСТИКИ
 # =========================
 
+
 @commands_router.message(Command("stats"))
 async def show_stats(message: Message):
     """Показать общую статистику бота"""
@@ -478,8 +479,9 @@ async def show_top_triggers(message: Message):
     """Показать топ триггеров"""
     top = bot_stats.get_top_triggers(10)
     if not top:
-        await message.answer("📊 Пока нет статистики по триггерам",
-                             parse_mode="MarkdownV2")
+        await message.answer(
+            "📊 Пока нет статистики по триггерам", parse_mode="MarkdownV2"
+        )
         return
 
     text = "🏆 *Топ-10 триггеров:*\n\n"
@@ -507,6 +509,7 @@ async def show_today_stats(message: Message):
 # =========================
 # АДМИНСКИЕ КОМАНДЫ
 # =========================
+
 
 @commands_router.message(Command("admin_stats"))
 async def admin_stats(message: Message):
@@ -537,20 +540,17 @@ async def export_stats(message: Message):
         json_data = json.dumps(stats_data, ensure_ascii=False, indent=2)
 
         # Создаем файл в памяти
-        file_buffer = BytesIO(json_data.encode('utf-8'))
+        file_buffer = BytesIO(json_data.encode("utf-8"))
         input_file = BufferedInputFile(
-            file_buffer.getvalue(),
-            filename="bot_stats_export.json"
+            file_buffer.getvalue(), filename="bot_stats_export.json"
         )
 
-        await message.answer_document(
-            input_file,
-            caption="📊 Экспорт статистики бота"
-        )
+        await message.answer_document(input_file, caption="📊 Экспорт статистики бота")
     except Exception as e:
         escaped_error = escape_markdown(str(e))
-        await message.answer(f"❌ Ошибка при экспорте: {escaped_error}",
-                             parse_mode="MarkdownV2")
+        await message.answer(
+            f"❌ Ошибка при экспорте: {escaped_error}", parse_mode="MarkdownV2"
+        )
 
 
 @commands_router.message(Command("clear_stats"))
@@ -563,7 +563,8 @@ async def clear_stats(message: Message):
     bot_stats.clear_stats()
     await message.answer(
         "🗑️ *Статистика очищена\\!*\n\nВся статистика была сброшена до нуля\\.",
-        parse_mode="MarkdownV2")
+        parse_mode="MarkdownV2",
+    )
 
 
 @commands_router.message(Command("remove_all_triggers"))
@@ -576,11 +577,13 @@ async def remove_all_triggers(message: Message):
     if chat_str in user_trigger_manager.data["chat_triggers"]:
         user_trigger_manager.data["chat_triggers"][chat_str] = {}
         user_trigger_manager._save_triggers()
-        await message.answer("🗑️ Все пользовательские триггеры чата удалены\\!",
-                             parse_mode="MarkdownV2")
+        await message.answer(
+            "🗑️ Все пользовательские триггеры чата удалены\\!", parse_mode="MarkdownV2"
+        )
     else:
-        await message.answer("❌ В этом чате нет пользовательских триггеров",
-                             parse_mode="MarkdownV2")
+        await message.answer(
+            "❌ В этом чате нет пользовательских триггеров", parse_mode="MarkdownV2"
+        )
 
 
 @commands_router.message(Command("subscribers"))
@@ -611,6 +614,7 @@ async def show_subscribers(message: Message):
 # СПРАВКА И ПРИВЕТСТВИЕ
 # =========================
 
+
 @commands_router.message(Command("help"))
 async def show_help(message: Message):
     help_text = (
@@ -628,8 +632,8 @@ async def show_help(message: Message):
         "/top – топ триггеров\n"
         "/today – статистика за сегодня\n\n"
         "🎯 *Пользовательские триггеры (ТОЛЬКО подписчики):*\n"
-        "/add \"фраза\" \"ответ\" – добавить триггер (безлимитно)\n"
-        "/remove \"фраза\" – удалить свой триггер\n"
+        '/add "фраза" "ответ" – добавить триггер (безлимитно)\n'
+        '/remove "фраза" – удалить свой триггер\n'
         "/triggers – список триггеров чата\n"
         "/my_triggers – ваша статистика\n\n"
         "/help – эта справка"
