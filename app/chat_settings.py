@@ -7,7 +7,7 @@ import random
 from datetime import datetime
 
 from app.db import SessionLocal
-from app.models.chat_config import ChatConfig
+from app.models import ChatConfig
 
 
 class ChatSettingsManager:
