@@ -1,4 +1,3 @@
-# from Tools.i18n.pygettext import escape_ascii
 from app.bot import dp, bot
 from app.controllers import subscription_manager
 from app.handlers import router
