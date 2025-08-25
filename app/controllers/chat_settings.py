@@ -6,7 +6,6 @@
 import random
 from datetime import datetime
 
-from app.db import SessionLocal
 from app.models import ChatConfig
 
 
@@ -116,7 +115,3 @@ class ChatSettingsManager:
             session.commit()
 
         return True, "🔄 Настройки чата сброшены к значениям по умолчанию!"
-
-
-# Создаем глобальный экземпляр менеджера настроек
-chat_settings_manager = ChatSettingsManager(SessionLocal)

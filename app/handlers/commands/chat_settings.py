@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from app.chat_settings import chat_settings_manager
+from app.controllers import chat_settings_manager
 from app.utils.decorators import admin_only
 from app.utils.tools import escape_markdown
 

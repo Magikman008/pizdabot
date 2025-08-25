@@ -1,9 +1,7 @@
 from aiogram import F, Router
 from aiogram.types import Message
 
-from app.chat_settings import chat_settings_manager
-from app.statistics import bot_stats
-from app.user_triggers import user_trigger_manager
+from app.controllers import user_trigger_manager, chat_settings_manager, bot_stats
 from triggers import russian_swear_triggers
 
 base_trigger_router = Router()

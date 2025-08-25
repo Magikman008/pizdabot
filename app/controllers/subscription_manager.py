@@ -319,7 +319,3 @@ class SubscriptionManager:
                 active_subscribers[user_str] = sub_data
 
         return active_subscribers
-
-
-# Создаем глобальный экземпляр менеджера подписок
-subscription_manager = SubscriptionManager()

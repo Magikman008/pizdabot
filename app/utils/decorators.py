@@ -2,7 +2,7 @@ from functools import wraps
 
 from aiogram.types import Message
 
-from app.subscription_manager import subscription_manager
+from app.controllers import subscription_manager
 from app.utils.tools import is_admin, has_premium_access
 
 

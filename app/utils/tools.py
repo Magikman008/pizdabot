@@ -1,6 +1,6 @@
 from aiogram.types import Message
 
-from app.subscription_manager import subscription_manager
+from app.controllers import subscription_manager
 from settings import ADMIN_USERNAMES
 
 

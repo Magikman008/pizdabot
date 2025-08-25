@@ -1,18 +1,9 @@
-import logging
-
 # from Tools.i18n.pygettext import escape_ascii
-from aiogram import Bot, Dispatcher
-
-import settings
+from app.bot import dp, bot
+from app.controllers import subscription_manager
 from app.handlers import router
-from app.subscription_manager import subscription_manager
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-bot = Bot(token=settings.token)
-dp = Dispatcher()
+
 
 
 async def main():

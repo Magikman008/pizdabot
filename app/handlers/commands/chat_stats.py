@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from app.statistics import bot_stats
+from app.controllers import bot_stats
 from app.utils.tools import escape_markdown
 
 chat_stats_router = Router()

@@ -2,8 +2,9 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import Message, LabeledPrice, CallbackQuery, PreCheckoutQuery
 
-# from app.app import logger
-from app.subscription_manager import subscription_manager
+from app.bot import bot
+from app.controllers import subscription_manager
+from app.logger import logger
 from app.utils.decorators import premium_only
 from app.utils.tools import escape_markdown
 from settings import ADMIN_USERNAMES

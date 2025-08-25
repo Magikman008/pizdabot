@@ -5,9 +5,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, BufferedInputFile
 
-from app.statistics import bot_stats
-from app.subscription_manager import subscription_manager
-from app.user_triggers import user_trigger_manager
+from app.controllers import bot_stats, subscription_manager, user_trigger_manager
 from app.utils.decorators import admin_only
 from app.utils.tools import escape_markdown
 

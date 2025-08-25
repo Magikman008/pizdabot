@@ -4,7 +4,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from app.user_triggers import user_trigger_manager
+from app.controllers import user_trigger_manager
 from app.utils.decorators import premium_only
 from app.utils.tools import escape_markdown, is_admin
 

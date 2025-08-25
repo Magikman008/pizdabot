@@ -319,7 +319,3 @@ class UserTriggerManager:
 🎯 Всего создано триггеров: {total_added}
 📅 Создано сегодня: {today_added}
 ⏰ Осталось на сегодня: {remaining_today}"""
-
-
-# Создаем глобальный экземпляр менеджера
-user_trigger_manager = UserTriggerManager()

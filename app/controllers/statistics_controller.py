@@ -248,7 +248,3 @@ class BotStatistics:
         data_to_export["daily_stats"] = daily_stats_export
 
         return data_to_export
-
-
-# Создаем глобальный экземпляр статистики
-bot_stats = BotStatistics()
