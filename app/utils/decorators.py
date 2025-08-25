@@ -33,4 +33,5 @@ def premium_only(handler):
             )
             return
         return await handler(message, *args, **kwargs)
+
     return wrapper

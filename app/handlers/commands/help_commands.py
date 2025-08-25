@@ -6,6 +6,7 @@ from app.utils.tools import escape_markdown, is_admin
 
 help_router = Router()
 
+
 @help_router.message(Command("help"))
 async def show_help(message: Message):
     help_text = (

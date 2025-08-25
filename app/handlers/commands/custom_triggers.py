@@ -10,6 +10,7 @@ from app.utils.tools import escape_markdown, is_admin
 
 custom_triggers_router = Router()
 
+
 @custom_triggers_router.message(Command("add"))
 @premium_only
 async def add_trigger(message: Message):

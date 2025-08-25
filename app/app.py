@@ -14,8 +14,6 @@ logger = logging.getLogger(__name__)
 bot = Bot(token=settings.token)
 dp = Dispatcher()
 
-# Список администраторов по username
-
 
 async def main():
     dp.include_router(router)
