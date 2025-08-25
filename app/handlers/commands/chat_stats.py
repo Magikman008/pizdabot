@@ -28,10 +28,10 @@ async def show_top_triggers(message: Message):
 
     text = "🏆 *Топ-10 триггеров:*\n\n"
     for i, (trigger, count) in enumerate(top.items(), 1):
-        escaped_trigger = escape_markdown(trigger)
-        text += f"{i}\\. '{escaped_trigger}' \\- {count} раз\n"
+        text += f"{i}. '{trigger}' - {count} раз"
 
-    await message.answer(text, parse_mode="MarkdownV2")
+    escaped_text = escape_markdown(text)
+    await message.answer(escaped_text, parse_mode="MarkdownV2")
 
 
 @chat_stats_router.message(Command("today"))
