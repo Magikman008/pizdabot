@@ -1,0 +1,20 @@
+from aiogram import Router
+
+from app.handlers.commands import (
+    admin_tools,
+    chat_settings,
+    chat_stats,
+    custom_triggers,
+    help_commands,
+    subscription,
+)
+
+commands_router = Router()
+commands_router.include_router(admin_tools.admin_router)
+commands_router.include_router(chat_settings.chat_settings_router)
+commands_router.include_router(chat_stats.chat_stats_router)
+commands_router.include_router(custom_triggers.custom_triggers_router)
+commands_router.include_router(help_commands.help_router)
+commands_router.include_router(subscription.subscription_router)
+
+__all__ = ["commands_router"]

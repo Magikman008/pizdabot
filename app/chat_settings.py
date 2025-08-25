@@ -3,207 +3,120 @@
 Позволяет отключать/включать бота и настраивать вероятность ответов
 """
 
-import json
-import os
 import random
 from datetime import datetime
-from typing import Dict, Any
+
+from app.db import SessionLocal
+from app.models.chat_config import ChatConfig
 
 
 class ChatSettingsManager:
-    def __init__(self, settings_file: str = "chat_settings.json"):
+    def __init__(self, db_session_factory):
         """
         Инициализация менеджера настроек чата
 
         Args:
-            settings_file (str): Путь к файлу с настройками
+            db_session_factory: sessionmaker из db.py
         """
-        self.settings_file = settings_file
-        self.data = self._load_settings()
+        self.db_session_factory = db_session_factory
 
-    def _load_settings(self) -> Dict[str, Any]:
-        """Загрузка настроек из файла"""
-        if not os.path.exists(self.settings_file):
-            return {"chats": {}, "version": "1.0"}  # Настройки по чатам
-
-        try:
-            with open(self.settings_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError):
-            return self._load_settings()  # Возвращаем пустую структуру при ошибке
-
-    def _save_settings(self):
-        """Сохранение настроек в файл"""
-        try:
-            # Создаем директорию если её нет
-            os.makedirs(
-                (
-                    os.path.dirname(self.settings_file)
-                    if os.path.dirname(self.settings_file)
-                    else "."
-                ),
-                exist_ok=True,
-            )
-
-            with open(self.settings_file, "w", encoding="utf-8") as f:
-                json.dump(self.data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"КРИТИЧЕСКАЯ ОШИБКА: Не удается сохранить настройки чата: {e}")
-            # Можно добавить fallback-логику или использовать временную директорию
-
-    def _get_chat_settings(self, chat_id: int) -> Dict[str, Any]:
-        """Получить настройки чата"""
-        chat_str = str(chat_id)
-
-        if chat_str not in self.data["chats"]:
-            # Настройки по умолчанию
-            default_settings = {
-                "enabled": True,  # Бот включен по умолчанию
-                "response_chance": 100,  # 100% вероятность ответа
-                "last_modified": datetime.now().isoformat(),
-                "modified_by": None,
-            }
-            self.data["chats"][chat_str] = default_settings
-            self._save_settings()
-
-        return self.data["chats"][chat_str]
+    def _get_or_create_chat(
+        self, chat_id: int, user_id: int | None = None
+    ) -> ChatConfig:
+        """Получить или создать настройки для чата"""
+        with self.db_session_factory() as session:
+            chat = session.query(ChatConfig).filter_by(id=chat_id).first()
+            if not chat:
+                chat = ChatConfig(
+                    id=chat_id,
+                    enabled=True,
+                    response_chance=100,
+                    last_modified=datetime.now(),
+                    modified_by=user_id,
+                )
+                session.add(chat)
+                session.commit()
+                session.refresh(chat)
+            return chat
 
     def is_bot_enabled(self, chat_id: int) -> bool:
         """Проверить, включен ли бот в чате"""
-        settings = self._get_chat_settings(chat_id)
-        return settings.get("enabled", True)
+        chat = self._get_or_create_chat(chat_id)
+        return chat.enabled
 
-    def set_bot_enabled(
-        self, chat_id: int, enabled: bool, user_id: int
-    ) -> tuple[bool, str]:
-        """
-        Включить/выключить бота в чате
-
-        Args:
-            chat_id: ID чата
-            enabled: True - включить, False - выключить
-            user_id: ID пользователя, который изменил настройку
-
-        Returns:
-            tuple: (успешно ли, сообщение)
-        """
-        chat_str = str(chat_id)
-        settings = self._get_chat_settings(chat_id)
-
-        settings["enabled"] = enabled
-        settings["last_modified"] = datetime.now().isoformat()
-        settings["modified_by"] = user_id
-
-        self.data["chats"][chat_str] = settings
-        self._save_settings()
+    def set_bot_enabled(self, chat_id: int, enabled: bool, user_id: int):
+        """Включить/выключить бота в чате"""
+        with self.db_session_factory() as session:
+            chat = self._get_or_create_chat(chat_id, user_id)
+            chat.enabled = enabled
+            chat.last_modified = datetime.now()
+            chat.modified_by = user_id
+            session.add(chat)
+            session.commit()
 
         status = "включен" if enabled else "выключен"
         emoji = "✅" if enabled else "❌"
-
         return True, f"{emoji} Бот {status} в этом чате!"
 
     def get_response_chance(self, chat_id: int) -> int:
-        """Получить вероятность ответа для чата"""
-        settings = self._get_chat_settings(chat_id)
-        return settings.get("response_chance", 100)
+        """Получить вероятность ответа"""
+        chat = self._get_or_create_chat(chat_id)
+        return chat.response_chance
 
-    def set_response_chance(
-        self, chat_id: int, chance: int, user_id: int
-    ) -> tuple[bool, str]:
-        """
-        Установить вероятность ответа бота
-
-        Args:
-            chat_id: ID чата
-            chance: Вероятность от 0 до 100
-            user_id: ID пользователя, который изменил настройку
-
-        Returns:
-            tuple: (успешно ли, сообщение)
-        """
+    def set_response_chance(self, chat_id: int, chance: int, user_id: int):
+        """Установить вероятность ответа"""
         if not (0 <= chance <= 100):
             return False, "❌ Вероятность должна быть от 0 до 100!"
 
-        chat_str = str(chat_id)
-        settings = self._get_chat_settings(chat_id)
-
-        settings["response_chance"] = chance
-        settings["last_modified"] = datetime.now().isoformat()
-        settings["modified_by"] = user_id
-
-        self.data["chats"][chat_str] = settings
-        self._save_settings()
+        with self.db_session_factory() as session:
+            chat = self._get_or_create_chat(chat_id, user_id)
+            chat.response_chance = chance
+            chat.last_modified = datetime.now()
+            chat.modified_by = user_id
+            session.add(chat)
+            session.commit()
 
         return True, f"🎯 Вероятность ответа установлена: {chance}%"
 
     def should_respond(self, chat_id: int) -> bool:
-        """
-        Определить, должен ли бот отвечать на сообщение
-        Проверяет и включен ли бот, и вероятность ответа
+        """Определить, должен ли бот отвечать"""
+        chat = self._get_or_create_chat(chat_id)
 
-        Args:
-            chat_id: ID чата
-
-        Returns:
-            bool: True если бот должен ответить
-        """
-        # Если бот выключен, не отвечаем
-        if not self.is_bot_enabled(chat_id):
+        if not chat.enabled:
             return False
-
-        # Проверяем вероятность
-        chance = self.get_response_chance(chat_id)
-        if chance == 0:
+        if chat.response_chance == 0:
             return False
-        if chance == 100:
+        if chat.response_chance == 100:
             return True
-
-        # Генерируем случайное число от 1 до 100
-        return random.randint(1, 100) <= chance
+        return random.randint(1, 100) <= chat.response_chance
 
     def get_chat_info(self, chat_id: int) -> str:
-        """Получить информацию о настройках чата"""
-        settings = self._get_chat_settings(chat_id)
+        """Получить информацию о чате"""
+        chat = self._get_or_create_chat(chat_id)
 
-        enabled = settings.get("enabled", True)
-        chance = settings.get("response_chance", 100)
-        last_modified = settings.get("last_modified", "Никогда")
+        status_emoji = "✅" if chat.enabled else "❌"
+        status_text = "включен" if chat.enabled else "выключен"
+        last_modified = chat.last_modified.strftime("%d.%m.%Y %H:%M")
 
-        status_emoji = "✅" if enabled else "❌"
-        status_text = "включен" if enabled else "выключен"
-
-        if last_modified != "Никогда":
-            # Форматируем дату
-            try:
-                date_obj = datetime.fromisoformat(last_modified)
-                last_modified = date_obj.strftime("%d.%m.%Y %H:%M")
-            except:
-                pass
-
-        info_text = f"""⚙️ **Настройки бота в чате:**
+        return f"""⚙️ **Настройки бота в чате:**
 
 {status_emoji} Статус: {status_text}
-🎯 Вероятность ответа: {chance}%
+🎯 Вероятность ответа: {chat.response_chance}%
 📅 Последнее изменение: {last_modified}"""
 
-        return info_text
-
-    def reset_chat_settings(self, chat_id: int, user_id: int) -> tuple[bool, str]:
-        """Сбросить настройки чата к значениям по умолчанию"""
-        chat_str = str(chat_id)
-
-        default_settings = {
-            "enabled": True,
-            "response_chance": 100,
-            "last_modified": datetime.now().isoformat(),
-            "modified_by": user_id,
-        }
-
-        self.data["chats"][chat_str] = default_settings
-        self._save_settings()
+    def reset_chat_settings(self, chat_id: int, user_id: int):
+        """Сбросить настройки к значениям по умолчанию"""
+        with self.db_session_factory() as session:
+            chat = self._get_or_create_chat(chat_id, user_id)
+            chat.enabled = True
+            chat.response_chance = 100
+            chat.last_modified = datetime.now()
+            chat.modified_by = user_id
+            session.add(chat)
+            session.commit()
 
         return True, "🔄 Настройки чата сброшены к значениям по умолчанию!"
 
 
 # Создаем глобальный экземпляр менеджера настроек
-chat_settings_manager = ChatSettingsManager()
+chat_settings_manager = ChatSettingsManager(SessionLocal)

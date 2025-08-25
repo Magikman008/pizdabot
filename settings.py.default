@@ -3,3 +3,9 @@
 
 # Токен бота от @BotFather
 token = "YOUR_BOT_TOKEN_HERE"
+
+# URL базы данных (например, SQLite, PostgreSQL)
+DATABASE_URL = "sqlite:///./local.db"
+
+# список логинов Администраторов
+ADMIN_USERNAMES = []
