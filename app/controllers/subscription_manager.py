@@ -12,9 +12,10 @@ from app.models import Subscription, Transaction, SubscriptionType
 
 
 class SubscriptionManager:
-        # Настройки подписки
+    # Настройки подписки
     SUBSCRIPTION_PRICE_STARS = 1  # Цена подписки в звёздочках
     SUBSCRIPTION_DURATION_DAYS = 30  # Длительность подписки в днях
+
     def __init__(self, session_maker):
         """
         Менеджер подписок через SQLAlchemy
@@ -23,7 +24,6 @@ class SubscriptionManager:
             session (Session): SQLAlchemy сессия
         """
         self.session_maker = session_maker
-
 
     def has_active_subscription(self, tg_chat_id: int) -> bool:
         """Есть ли активная подписка у пользователя/чата"""
@@ -65,7 +65,7 @@ class SubscriptionManager:
 ⏰ Осталось дней: {days_left}"""
 
     def activate_subscription(
-            self, user_id: int, chat_id: int, transaction_id: str = None
+        self, user_id: int, chat_id: int, transaction_id: str = None
     ) -> Tuple[bool, str]:
         """Активировать или продлить подписку"""
         now = datetime.now()
@@ -79,7 +79,9 @@ class SubscriptionManager:
             )
 
             if sub and sub.expires_at > now:
-                new_expiry = sub.expires_at + timedelta(days=self.SUBSCRIPTION_DURATION_DAYS)
+                new_expiry = sub.expires_at + timedelta(
+                    days=self.SUBSCRIPTION_DURATION_DAYS
+                )
                 sub.expires_at = new_expiry
             else:
                 new_expiry = now + timedelta(days=self.SUBSCRIPTION_DURATION_DAYS)
@@ -151,8 +153,6 @@ class SubscriptionManager:
         """Вернуть всех активных подписчиков"""
         now = datetime.now()
         subs = (
-            self.session.query(Subscription)
-            .filter(Subscription.expires_at > now)
-            .all()
+            self.session.query(Subscription).filter(Subscription.expires_at > now).all()
         )
         return {sub.user_id: sub for sub in subs}

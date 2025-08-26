@@ -1,7 +1,13 @@
 from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import Message, LabeledPrice, CallbackQuery, PreCheckoutQuery, InlineKeyboardMarkup, \
-    InlineKeyboardButton
+from aiogram.types import (
+    Message,
+    LabeledPrice,
+    CallbackQuery,
+    PreCheckoutQuery,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 
 from app.bot import bot
 from app.controllers import subscription_manager, SubscriptionManager
@@ -26,11 +32,16 @@ async def show_subscription_info(message: Message):
 
     # Кнопка информации
     info_button = InlineKeyboardButton(
-        text="ℹ️ Информация о подписке", callback_data=f"subscription_info:{message.chat.id}"
+        text="ℹ️ Информация о подписке",
+        callback_data=f"subscription_info:{message.chat.id}",
     )
 
     await message.answer(
-        escape_markdown(description), reply_markup=InlineKeyboardMarkup(inline_keyboard=[[buy_button], [info_button]]), parse_mode="MarkdownV2"
+        escape_markdown(description),
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[buy_button], [info_button]]
+        ),
+        parse_mode="MarkdownV2",
     )
 
 
@@ -110,11 +121,15 @@ async def successful_payment_handler(message: Message):
 
             # Активируем подписку
             success, msg = subscription_manager.activate_subscription(
-                user_id=user_id, chat_id=chat_id, transaction_id=payment.telegram_payment_charge_id
+                user_id=user_id,
+                chat_id=chat_id,
+                transaction_id=payment.telegram_payment_charge_id,
             )
 
             if success:
-                await bot.send_message(chat_id, escape_markdown(msg), parse_mode="MarkdownV2")
+                await bot.send_message(
+                    chat_id, escape_markdown(msg), parse_mode="MarkdownV2"
+                )
 
                 # Уведомляем админов о новой подписке (опционально)
                 admin_msg = f"🎉 Новая подписка!\nПользователь: {message.from_user.full_name} (ID: {user_id})\nОплата: {payment.total_amount} звёздочек"
