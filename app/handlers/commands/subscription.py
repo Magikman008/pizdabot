@@ -113,43 +113,45 @@ async def successful_payment_handler(message: Message):
     payment = message.successful_payment
 
     # Проверяем, что это платеж за подписку
-    if payment.invoice_payload.startswith("subscription:"):
-        try:
-            _, user_id_str, chat_id_str, price_str = payment.invoice_payload.split(":")
-            user_id = int(user_id_str)
-            chat_id = int(chat_id_str)
+    if not payment.invoice_payload.startswith("subscription:"):
+        return
 
-            # Активируем подписку
-            success, msg = subscription_manager.activate_subscription(
-                user_id=user_id,
-                chat_id=chat_id,
-                transaction_id=payment.telegram_payment_charge_id,
+    try:
+        _, user_id_str, chat_id_str, price_str = payment.invoice_payload.split(":")
+        user_id = int(user_id_str)
+        chat_id = int(chat_id_str)
+
+        # Активируем подписку
+        success, msg = subscription_manager.activate_subscription(
+            user_id=user_id,
+            chat_id=chat_id,
+            transaction_id=payment.telegram_payment_charge_id,
+        )
+
+        if success:
+            await bot.send_message(
+                chat_id, escape_markdown(msg), parse_mode="MarkdownV2"
             )
 
-            if success:
-                await bot.send_message(
-                    chat_id, escape_markdown(msg), parse_mode="MarkdownV2"
-                )
-
-                # Уведомляем админов о новой подписке (опционально)
-                admin_msg = f"🎉 Новая подписка!\nПользователь: {message.from_user.full_name} (ID: {user_id})\nОплата: {payment.total_amount} звёздочек"
-                for admin_username in ADMIN_USERNAMES:
-                    try:
-                        # Здесь можно отправить уведомление админам
-                        pass
-                    except:
-                        pass
-            else:
-                await message.answer(
-                    "❌ Ошибка при активации подписки\\. Обратитесь к администратору\\.",
-                    parse_mode="MarkdownV2",
-                )
-
-        except Exception as e:
-            logger.error(f"Ошибка при обработке платежа: {e}")
+            # Уведомляем админов о новой подписке (опционально)
+            admin_msg = f"🎉 Новая подписка!\nПользователь: {message.from_user.full_name} (ID: {user_id})\nОплата: {payment.total_amount} звёздочек"
+            for admin_username in ADMIN_USERNAMES:
+                try:
+                    # Здесь можно отправить уведомление админам
+                    pass
+                except:
+                    pass
+        else:
             await message.answer(
-                "❌ Произошла ошибка при обработке платежа\\.", parse_mode="MarkdownV2"
+                "❌ Ошибка при активации подписки\\. Обратитесь к администратору\\.",
+                parse_mode="MarkdownV2",
             )
+
+    except Exception as e:
+        logger.error(f"Ошибка при обработке платежа: {e}")
+        await message.answer(
+            "❌ Произошла ошибка при обработке платежа\\.", parse_mode="MarkdownV2"
+        )
 
 
 @subscription_router.message(Command("premium"))
