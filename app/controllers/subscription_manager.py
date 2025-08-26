@@ -152,7 +152,8 @@ class SubscriptionManager:
     def get_all_subscribers(self) -> Dict[int, Subscription]:
         """Вернуть всех активных подписчиков"""
         now = datetime.now()
-        subs = (
-            self.session.query(Subscription).filter(Subscription.expires_at > now).all()
-        )
+        with self.session_maker() as session:
+            subs = (
+                session.query(Subscription).filter(Subscription.expires_at > now).all()
+            )
         return {sub.user_id: sub for sub in subs}
