@@ -6,14 +6,15 @@
 from datetime import datetime, timedelta
 from typing import Dict, Tuple
 
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.orm import Session
 
 from app.models import Subscription, Transaction, SubscriptionType
 
 
 class SubscriptionManager:
+        # Настройки подписки
+    SUBSCRIPTION_PRICE_STARS = 1  # Цена подписки в звёздочках
+    SUBSCRIPTION_DURATION_DAYS = 30  # Длительность подписки в днях
     def __init__(self, session_maker):
         """
         Менеджер подписок через SQLAlchemy
@@ -23,9 +24,6 @@ class SubscriptionManager:
         """
         self.session_maker = session_maker
 
-        # Настройки подписки
-        self.SUBSCRIPTION_PRICE_STARS = 1  # Цена подписки в звёздочках
-        self.SUBSCRIPTION_DURATION_DAYS = 30  # Длительность подписки в днях
 
     def has_active_subscription(self, tg_chat_id: int) -> bool:
         """Есть ли активная подписка у пользователя/чата"""
@@ -64,8 +62,7 @@ class SubscriptionManager:
 
 ✅ Подписка активна
 📅 Истекает: {sub.expires_at.strftime('%d.%m.%Y %H:%M')}
-⏰ Осталось дней: {days_left}
-🎯 Статус: Премиум-пользователь"""
+⏰ Осталось дней: {days_left}"""
 
     def activate_subscription(
             self, user_id: int, chat_id: int, transaction_id: str = None
@@ -113,40 +110,9 @@ class SubscriptionManager:
 
 ⭐ Оплачено: {self.SUBSCRIPTION_PRICE_STARS} звёздочка
 📅 Действует до: {new_expiry.strftime('%d.%m.%Y %H:%M')}
-🎯 Статус: Премиум-пользователь
 
 🚀 Теперь вам доступны все премиум-функции бота!""",
         )
-
-    def create_subscription_keyboard(self, message: Message) -> InlineKeyboardMarkup:
-        """
-        Создать клавиатуру для покупки подписки
-
-        Returns:
-            InlineKeyboardMarkup: Клавиатура с кнопками
-        """
-        # Используем InlineKeyboardBuilder для aiogram 3.x
-        builder = InlineKeyboardBuilder()
-
-        # Кнопка покупки подписки за звёздочки
-        buy_button = InlineKeyboardButton(
-            text=f"⭐ Купить подписку за {self.SUBSCRIPTION_PRICE_STARS} звёздочку",
-            callback_data=f"buy_subscription:{message.from_user.id}:{message.chat.id}:{self.SUBSCRIPTION_PRICE_STARS}",
-        )
-
-        # Кнопка информации
-        info_button = InlineKeyboardButton(
-            text="ℹ️ Информация о подписке", callback_data=f"subscription_info:{message.chat.id}"
-        )
-
-        # Добавляем кнопки (каждая в своем ряду)
-        builder.add(buy_button)
-        builder.add(info_button)
-
-        # Устанавливаем ширину строки
-        builder.adjust(1)
-
-        return builder.as_markup()
 
     def get_subscription_description(self) -> str:
         """
