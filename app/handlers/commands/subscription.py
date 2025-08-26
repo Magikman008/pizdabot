@@ -16,7 +16,7 @@ subscription_router = Router()
 async def show_subscription_info(message: Message):
     """Показать информацию о подписке и возможность покупки"""
     description = subscription_manager.get_subscription_description()
-    keyboard = subscription_manager.create_subscription_keyboard()
+    keyboard = subscription_manager.create_subscription_keyboard(message)
 
     await message.answer(
         escape_markdown(description), reply_markup=keyboard, parse_mode="MarkdownV2"
@@ -29,21 +29,22 @@ async def process_subscription_purchase(callback: CallbackQuery):
     await callback.answer()
 
     try:
-        # Извлекаем цену из callback_data
-        _, price_str = callback.data.split(":")
+        _, user_id_str, chat_id_str, price_str = callback.data.split(":")
+        user_id = int(user_id_str)
+        chat_id = int(chat_id_str)
         price_stars = int(price_str)
 
         # Создаем инвойс для оплаты звёздочками
         prices = [LabeledPrice(label="Премиум подписка", amount=price_stars)]
 
-        # Отправляем инвойс пользователю
+        # Отправляем инвойс
         await bot.send_invoice(
-            chat_id=callback.from_user.id,
+            chat_id=callback.message.chat.id,
             title="⭐ Премиум-подписка Подъёбыш",
             description=f"Подписка на {subscription_manager.SUBSCRIPTION_DURATION_DAYS} дней с премиум-функциями",
-            payload=f"subscription:{callback.from_user.id}:{price_stars}",
-            provider_token="",  # Для звёздочек пустой
-            currency="XTR",  # Валюта звёздочек
+            payload=f"subscription:{user_id}:{chat_id}:{price_stars}",
+            provider_token="",  # Для звёздочек пусто
+            currency="XTR",
             prices=prices,
             need_name=False,
             need_phone_number=False,
@@ -54,11 +55,6 @@ async def process_subscription_purchase(callback: CallbackQuery):
             is_flexible=False,
         )
 
-        await callback.message.answer(
-            "💫 Инвойс для оплаты отправлен\\! Проверьте личные сообщения с ботом\\.",
-            parse_mode="MarkdownV2",
-        )
-
     except Exception as e:
         logger.error(f"Ошибка при создании инвойса: {e}")
         await callback.message.answer(
@@ -67,12 +63,15 @@ async def process_subscription_purchase(callback: CallbackQuery):
         )
 
 
-@subscription_router.callback_query(F.data == "subscription_info")
+@subscription_router.callback_query(F.data.startswith("subscription_info"))
 async def show_subscription_status(callback: CallbackQuery):
     """Показать статус подписки пользователя"""
     await callback.answer()
 
-    sub_info = subscription_manager.get_subscription_info(callback.from_user.id)
+    _, chat_id_str = callback.data.split(":")
+    chat_id = int(chat_id_str)
+
+    sub_info = subscription_manager.get_subscription_info(chat_id)
     await callback.message.answer(escape_markdown(sub_info), parse_mode="MarkdownV2")
 
 
@@ -94,16 +93,17 @@ async def successful_payment_handler(message: Message):
     # Проверяем, что это платеж за подписку
     if payment.invoice_payload.startswith("subscription:"):
         try:
-            _, user_id_str, price_str = payment.invoice_payload.split(":")
+            _, user_id_str, chat_id_str, price_str = payment.invoice_payload.split(":")
             user_id = int(user_id_str)
+            chat_id = int(chat_id_str)
 
             # Активируем подписку
             success, msg = subscription_manager.activate_subscription(
-                user_id=user_id, transaction_id=payment.telegram_payment_charge_id
+                user_id=user_id, chat_id=chat_id, transaction_id=payment.telegram_payment_charge_id
             )
 
             if success:
-                await message.answer(escape_markdown(msg), parse_mode="MarkdownV2")
+                await bot.send_message(chat_id, escape_markdown(msg), parse_mode="MarkdownV2")
 
                 # Уведомляем админов о новой подписке (опционально)
                 admin_msg = f"🎉 Новая подписка!\nПользователь: {message.from_user.full_name} (ID: {user_id})\nОплата: {payment.total_amount} звёздочек"
