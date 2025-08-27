@@ -26,4 +26,4 @@ bot_stats = BotStatistics()
 subscription_manager = SubscriptionManager(SessionLocal)
 
 # Создаем глобальный экземпляр менеджера
-user_trigger_manager = UserTriggerManager()
+user_trigger_manager = UserTriggerManager(SessionLocal)

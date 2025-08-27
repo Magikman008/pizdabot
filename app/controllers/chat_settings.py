@@ -20,7 +20,7 @@ class ChatSettingsManager:
         self.db_session_factory = db_session_factory
 
     def _get_or_create_chat(
-        self, chat_id: int, user_id: int | None = None
+        self, chat_id: int
     ) -> ChatConfig:
         """Получить или создать настройки для чата"""
         with self.db_session_factory() as session:
@@ -30,23 +30,16 @@ class ChatSettingsManager:
                     id=chat_id,
                     enabled=True,
                     response_chance=100,
-                    last_modified=datetime.now(),
-                    modified_by=user_id,
                 )
                 session.add(chat)
                 session.commit()
                 session.refresh(chat)
             return chat
 
-    def is_bot_enabled(self, chat_id: int) -> bool:
-        """Проверить, включен ли бот в чате"""
-        chat = self._get_or_create_chat(chat_id)
-        return chat.enabled
-
     def set_bot_enabled(self, chat_id: int, enabled: bool, user_id: int):
         """Включить/выключить бота в чате"""
         with self.db_session_factory() as session:
-            chat = self._get_or_create_chat(chat_id, user_id)
+            chat = self._get_or_create_chat(chat_id)
             chat.enabled = enabled
             chat.last_modified = datetime.now()
             chat.modified_by = user_id
@@ -57,18 +50,13 @@ class ChatSettingsManager:
         emoji = "✅" if enabled else "❌"
         return True, f"{emoji} Бот {status} в этом чате!"
 
-    def get_response_chance(self, chat_id: int) -> int:
-        """Получить вероятность ответа"""
-        chat = self._get_or_create_chat(chat_id)
-        return chat.response_chance
-
     def set_response_chance(self, chat_id: int, chance: int, user_id: int):
         """Установить вероятность ответа"""
         if not (0 <= chance <= 100):
             return False, "❌ Вероятность должна быть от 0 до 100!"
 
         with self.db_session_factory() as session:
-            chat = self._get_or_create_chat(chat_id, user_id)
+            chat = self._get_or_create_chat(chat_id)
             chat.response_chance = chance
             chat.last_modified = datetime.now()
             chat.modified_by = user_id
@@ -106,7 +94,7 @@ class ChatSettingsManager:
     def reset_chat_settings(self, chat_id: int, user_id: int):
         """Сбросить настройки к значениям по умолчанию"""
         with self.db_session_factory() as session:
-            chat = self._get_or_create_chat(chat_id, user_id)
+            chat = self._get_or_create_chat(chat_id)
             chat.enabled = True
             chat.response_chance = 100
             chat.last_modified = datetime.now()

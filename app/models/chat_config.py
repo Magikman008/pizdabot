@@ -12,4 +12,4 @@ class ChatConfig(Base):
     enabled = Column(Boolean, nullable=False, default=True)
     response_chance = Column(Integer, nullable=False, default=100)
     last_modified = Column(DateTime, nullable=False, default=datetime.now)
-    modified_by = Column(BigInteger, nullable=False)
+    modified_by = Column(BigInteger, nullable=True)
