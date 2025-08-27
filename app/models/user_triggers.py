@@ -17,5 +17,5 @@ class CustomTrigger(Base):
     uses = Column(Integer, default=0, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('chat_id', 'trigger_word', name='uq_chat_trigger'),
+        UniqueConstraint("chat_id", "trigger_word", name="uq_chat_trigger"),
     )

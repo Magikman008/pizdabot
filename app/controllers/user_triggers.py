@@ -74,14 +74,17 @@ class UserTriggerManager:
 
         with self.session_maker() as session:
             # Сколько пользователь добавил СЕГОДНЯ во всех чатах (совпадает с прежней логикой)
-            today_count = session.scalar(
-                select(func.count())
-                .select_from(CustomTrigger)
-                .where(
-                    CustomTrigger.author_id == user_id,
-                    CustomTrigger.created == today,
+            today_count = (
+                session.scalar(
+                    select(func.count())
+                    .select_from(CustomTrigger)
+                    .where(
+                        CustomTrigger.author_id == user_id,
+                        CustomTrigger.created == today,
+                    )
                 )
-            ) or 0
+                or 0
+            )
 
             if today_count >= self.MAX_TRIGGERS_PER_USER_PER_DAY:
                 return (
@@ -91,11 +94,14 @@ class UserTriggerManager:
                 )
 
             # Сколько всего триггеров уже есть в чате
-            chat_count = session.scalar(
-                select(func.count())
-                .select_from(CustomTrigger)
-                .where(CustomTrigger.chat_id == chat_id)
-            ) or 0
+            chat_count = (
+                session.scalar(
+                    select(func.count())
+                    .select_from(CustomTrigger)
+                    .where(CustomTrigger.chat_id == chat_id)
+                )
+                or 0
+            )
 
             if chat_count >= self.MAX_TRIGGERS_PER_CHAT:
                 return (
@@ -105,8 +111,9 @@ class UserTriggerManager:
 
             return True, ""
 
-
-    def add_trigger(self, user_id: int, chat_id: int, trigger: str, response: str) -> tuple[bool, str]:
+    def add_trigger(
+        self, user_id: int, chat_id: int, trigger: str, response: str
+    ) -> tuple[bool, str]:
         error = self._validate_trigger(trigger, response)
         if error:
             return False, error
@@ -142,7 +149,9 @@ class UserTriggerManager:
 
         return True, f"✅ Триггер '{trigger}' успешно добавлен!"
 
-    def remove_trigger(self, user_id: int, chat_id: int, trigger: str, is_admin: bool = False) -> tuple[bool, str]:
+    def remove_trigger(
+        self, user_id: int, chat_id: int, trigger: str, is_admin: bool = False
+    ) -> tuple[bool, str]:
         trigger_clean = self._clean_text(trigger)
         with self.session_maker() as session:
             tr = session.scalar(
@@ -188,7 +197,6 @@ class UserTriggerManager:
         return None
 
     def get_response(self, chat_id: int, text: str) -> Optional[str]:
-
         """
         Поиск соответствующих триггеров в тексте сообщения
         Проверяет, заканчивается ли сообщение каким-либо триггером
@@ -218,8 +226,8 @@ class UserTriggerManager:
                 if text_clean.endswith(trig):
                     # граница слова: либо точное совпадение, либо перед триггером разделитель
                     boundary_ok = (
-                            len(text_clean) == len(trig)
-                            or text_clean[-(len(trig) + 1)] in " .,!?;:"
+                        len(text_clean) == len(trig)
+                        or text_clean[-(len(trig) + 1)] in " .,!?;:"
                     )
                     if boundary_ok:
                         tr.uses += 1
@@ -262,20 +270,26 @@ class UserTriggerManager:
         today = date.today()
 
         with self.session_maker() as session:
-            total_added = session.scalar(
-                select(func.count())
-                .select_from(CustomTrigger)
-                .where(CustomTrigger.author_id == user_id)
-            ) or 0
-
-            today_added = session.scalar(
-                select(func.count())
-                .select_from(CustomTrigger)
-                .where(
-                    CustomTrigger.author_id == user_id,
-                    CustomTrigger.created == today,
+            total_added = (
+                session.scalar(
+                    select(func.count())
+                    .select_from(CustomTrigger)
+                    .where(CustomTrigger.author_id == user_id)
                 )
-            ) or 0
+                or 0
+            )
+
+            today_added = (
+                session.scalar(
+                    select(func.count())
+                    .select_from(CustomTrigger)
+                    .where(
+                        CustomTrigger.author_id == user_id,
+                        CustomTrigger.created == today,
+                    )
+                )
+                or 0
+            )
 
             remaining_today = max(0, self.MAX_TRIGGERS_PER_USER_PER_DAY - today_added)
 

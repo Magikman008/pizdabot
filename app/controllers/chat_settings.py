@@ -19,9 +19,7 @@ class ChatSettingsManager:
         """
         self.db_session_factory = db_session_factory
 
-    def _get_or_create_chat(
-        self, chat_id: int
-    ) -> ChatConfig:
+    def _get_or_create_chat(self, chat_id: int) -> ChatConfig:
         """Получить или создать настройки для чата"""
         with self.db_session_factory() as session:
             chat = session.query(ChatConfig).filter_by(id=chat_id).first()
