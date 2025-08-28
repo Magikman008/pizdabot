@@ -154,7 +154,7 @@ async def successful_payment_handler(message: Message):
         )
 
 
-@subscription_router.message(Command("premium"))
+# @subscription_router.message(Command("premium"))
 @premium_only
 async def premium_command(message: Message):
     """Премиум-команда доступная только подписчикам"""

@@ -20,7 +20,7 @@ chat_settings_manager = ChatSettingsManager(SessionLocal)
 
 
 # Создаем глобальный экземпляр статистики
-bot_stats = BotStatistics()
+bot_stats = BotStatistics(SessionLocal)
 
 # Создаем глобальный экземпляр менеджера подписок
 subscription_manager = SubscriptionManager(SessionLocal)

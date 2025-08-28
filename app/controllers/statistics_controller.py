@@ -3,248 +3,207 @@
 Отслеживает количество подъёбов, пользователей и групп
 """
 
-import json
-import os
-from datetime import datetime
-from typing import Dict, Any
+from datetime import datetime, timedelta
+from typing import Dict
+
+from sqlalchemy import select, func, desc
+
+from app.models import RoastWord, RoastEvent
 
 
 class BotStatistics:
-    def __init__(self, stats_file: str = "bot_stats.json"):
+    def __init__(self, session_maker):
         """
         Инициализация класса статистики
 
         Args:
-            stats_file (str): Путь к файлу статистики
+            session_maker: sessionmaker SQLAlchemy
         """
-        self.stats_file = stats_file
-        self.stats = self._load_stats()
+        self.session_maker = session_maker
 
-    def _load_stats(self) -> Dict[str, Any]:
-        """Загрузка статистики из файла"""
-        if not os.path.exists(self.stats_file):
-            return {
-                "total_roasts": 0,
-                "unique_users": set(),
-                "unique_groups": set(),
-                "daily_stats": {},
-                "trigger_stats": {},
-                "start_date": datetime.now().isoformat(),
-            }
-
-        try:
-            with open(self.stats_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            # top-level множества
-            data["unique_users"] = set(data.get("unique_users", []))
-            data["unique_groups"] = set(data.get("unique_groups", []))
-            # Конвертируем вложенные списки daily_stats → множества
-            for date, day in data.get("daily_stats", {}).items():
-                if isinstance(day.get("users"), list):
-                    day["users"] = set(day["users"])
-                if isinstance(day.get("groups"), list):
-                    day["groups"] = set(day["groups"])
-            return data
-
-        except (json.JSONDecodeError, FileNotFoundError):
-            # при ошибке возвращаем новую пустую статистику
-            return {
-                "total_roasts": 0,
-                "unique_users": set(),
-                "unique_groups": set(),
-                "daily_stats": {},
-                "trigger_stats": {},
-                "start_date": datetime.now().isoformat(),
-            }
-
-    def _save_stats(self):
-        """Сохранение статистики в файл"""
-        # Преобразуем множества в списки для JSON сериализации
-        data_to_save = self.stats.copy()
-        data_to_save["unique_users"] = list(self.stats["unique_users"])
-        data_to_save["unique_groups"] = list(self.stats["unique_groups"])
-
-        # Преобразуем множества в дневной статистике
-        daily_stats_copy = {}
-        for date, day_data in self.stats["daily_stats"].items():
-            daily_stats_copy[date] = day_data.copy()
-            if isinstance(day_data.get("users"), set):
-                daily_stats_copy[date]["users"] = list(day_data["users"])
-            if isinstance(day_data.get("groups"), set):
-                daily_stats_copy[date]["groups"] = list(day_data["groups"])
-        data_to_save["daily_stats"] = daily_stats_copy
-
-        try:
-            with open(self.stats_file, "w", encoding="utf-8") as f:
-                json.dump(data_to_save, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"Ошибка сохранения статистики: {e}")
+    def __get_or_create_word(self, word: str) -> RoastWord:
+        word_clean = word.lower().strip()
+        with self.session_maker() as session:
+            db_word = session.scalar(
+                select(RoastWord).where(RoastWord.word == word_clean)
+            )
+            if not db_word:
+                db_word = RoastWord(word=word_clean)
+                session.add(db_word)
+                session.commit()
+                session.refresh(db_word)
+            return db_word
 
     def add_roast(self, user_id: int, chat_id: int, trigger: str):
         """
-        Добавить запись о подъёбе
-
-        Args:
-            user_id (int): ID пользователя
-            chat_id (int): ID чата
-            trigger (str): Сработавший триггер
+        Добавить событие прожарки
         """
-        # Увеличиваем общий счётчик
-        self.stats["total_roasts"] += 1
+        db_word = self.__get_or_create_word(trigger)
+        with self.session_maker() as session:
+            event = RoastEvent(
+                chat_id=chat_id,
+                user_id=user_id,
+                word_id=db_word.id,
+                created_at=datetime.now(),
+            )
+            session.add(event)
+            session.commit()
 
-        # Добавляем пользователя
-        self.stats["unique_users"].add(user_id)
+    def get_total_stats(
+            self, chat_id: int | None = None
+    ) -> Dict[str, int | str | None]:
+        """
+        Общая статистика:
+        - всего прожарок
+        - количество прожаренных пользователей
+        - количество дней с прожарками
+        - дата первой прожарки
+        - количество уникальных чатов (только если chat_id=None)
+        """
+        with self.session_maker() as session:
+            total_roasts_stmt = select(func.count(RoastEvent.id))
+            unique_users_stmt = select(func.count(func.distinct(RoastEvent.user_id)))
+            days_active_stmt = select(
+                func.count(func.distinct(func.date(RoastEvent.created_at)))
+            )
+            first_roast_stmt = (
+                select(RoastEvent.created_at)
+                .order_by(RoastEvent.created_at.asc())
+                .limit(1)
+            )
 
-        # Добавляем группу (если это не приватный чат)
-        if chat_id != user_id:  # В приватном чате chat_id == user_id
-            self.stats["unique_groups"].add(chat_id)
+            if chat_id is not None:
+                total_roasts_stmt = total_roasts_stmt.where(RoastEvent.chat_id == chat_id)
+                unique_users_stmt = unique_users_stmt.where(RoastEvent.chat_id == chat_id)
+                days_active_stmt = days_active_stmt.where(RoastEvent.chat_id == chat_id)
+                first_roast_stmt = first_roast_stmt.where(RoastEvent.chat_id == chat_id)
 
-        # Статистика по дням
-        today = datetime.now().strftime("%Y-%m-%d")
-        if today not in self.stats["daily_stats"]:
-            self.stats["daily_stats"][today] = {
-                "roasts": 0,
-                "users": set(),
-                "groups": set(),
-            }
+            total_roasts = session.scalar(total_roasts_stmt)
+            unique_users = session.scalar(unique_users_stmt)
+            days_active = session.scalar(days_active_stmt)
+            first_roast = session.scalar(first_roast_stmt)
 
-        self.stats["daily_stats"][today]["roasts"] += 1
-        self.stats["daily_stats"][today]["users"].add(user_id)
-        if chat_id != user_id:
-            self.stats["daily_stats"][today]["groups"].add(chat_id)
+            # считаем количество уникальных чатов только если chat_id не задан
+            unique_chats = None
+            if chat_id is None:
+                unique_chats = session.scalar(
+                    select(func.count(func.distinct(RoastEvent.chat_id)))
+                )
 
-        # Статистика по триггерам
-        if trigger not in self.stats["trigger_stats"]:
-            self.stats["trigger_stats"][trigger] = 0
-        self.stats["trigger_stats"][trigger] += 1
-
-        # Сохраняем статистику
-        self._save_stats()
-
-    def get_total_stats(self) -> Dict[str, Any]:
-        """Получить общую статистику"""
-        return {
-            "total_roasts": self.stats["total_roasts"],
-            "unique_users": len(self.stats["unique_users"]),
-            "unique_groups": len(self.stats["unique_groups"]),
-            "days_active": len(self.stats["daily_stats"]),
-            "start_date": self.stats["start_date"],
+        result = {
+            "total_roasts": total_roasts or 0,
+            "total_roasted_users": unique_users or 0,
+            "days_active": days_active or 0,
+            "first_roast": first_roast.isoformat() if first_roast else None,
         }
 
-    def get_top_triggers(self, limit: int = 10) -> Dict[str, int]:
-        """Получить топ триггеров"""
-        trigger_stats = self.stats.get("trigger_stats", {})
-        sorted_triggers = sorted(
-            trigger_stats.items(), key=lambda x: x[1], reverse=True
-        )
-        return dict(sorted_triggers[:limit])
+        if chat_id is None:
+            result["unique_chats"] = unique_chats or 0
 
-    def get_daily_stats(self, date: str = None) -> Dict[str, Any]:
+        return result
+
+    def get_top_triggers(
+        self, chat_id: int | None = None, limit: int = 10
+    ) -> Dict[str, int]:
         """
-        Получить статистику за день
-
-        Args:
-            date (str): Дата в формате YYYY-MM-DD (если None, то сегодня)
+        Топ триггеров по количеству срабатываний в конкретном чате
         """
-        if date is None:
-            date = datetime.now().strftime("%Y-%m-%d")
+        with self.session_maker() as session:
+            stmt = (
+                select(RoastWord.word, func.count(RoastEvent.id).label("cnt"))
+                .join(RoastEvent)
+                .group_by(RoastWord.id)
+                .order_by(desc("cnt"))
+                .limit(limit)
+            )
 
-        daily_data = self.stats["daily_stats"].get(
-            date, {"roasts": 0, "users": set(), "groups": set()}
-        )
+            if chat_id:
+                stmt = stmt.where(RoastEvent.chat_id == chat_id)
 
-        return {
-            "date": date,
-            "roasts": daily_data.get("roasts", 0),
-            "unique_users": len(daily_data.get("users", set())),
-            "unique_groups": len(daily_data.get("groups", set())),
-        }
+            result = session.execute(stmt).all()
 
-    def get_stats_summary(self) -> str:
+        return {word: count for word, count in result}
+
+    def get_daily_stats(
+            self, chat_id: int | None = None, days: int = 1
+    ) -> list[dict[str, int | str]]:
+        """
+        Статистика по дням.
+        - Если days=1 — возвращает только сегодня
+        - Если days>1 — возвращает статистику за последние N дней
+        - Если chat_id=None — считаем по всем чатам
+        """
+        end = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        start = end - timedelta(days=days)
+
+        with self.session_maker() as session:
+            stmt = (
+                select(
+                    func.date(RoastEvent.created_at).label("day"),
+                    func.count(RoastEvent.id).label("roasts"),
+                    func.count(func.distinct(RoastEvent.user_id)).label("unique_users"),
+                )
+                .where(RoastEvent.created_at >= start)
+                .where(RoastEvent.created_at < end)
+                .group_by(func.date(RoastEvent.created_at))
+                .order_by(func.date(RoastEvent.created_at))
+            )
+
+            if chat_id is not None:
+                stmt = stmt.where(RoastEvent.chat_id == chat_id)
+
+            result = session.execute(stmt).all()
+
+        # приводим к нормальному виду
+        return [
+            {"date": str(day), "roasts": roasts, "unique_users": users}
+            for day, roasts, users in result
+        ]
+
+    def get_chat_stats_summary(self, chat_id: int) -> str:
         """Получить текстовое резюме статистики"""
-        total = self.get_total_stats()
-        today = self.get_daily_stats()
-        top_triggers = self.get_top_triggers(5)
+        total = self.get_total_stats(chat_id)
+        last_days = self.get_daily_stats(chat_id, days=3)
+        top_triggers = self.get_top_triggers(chat_id, 5)
 
         summary = f"""📊 Статистика бота
 
 🔥 Всего подъёбов: {total['total_roasts']}
-👥 Уникальных пользователей: {total['unique_users']}
-💬 Уникальных групп: {total['unique_groups']}
+👥 Пользователей подъёбано: {total['total_roasted_users']}
 📅 Дней активности: {total['days_active']}
 
-Сегодня ({today['date']}):
-🔥 Подъёбов: {today['roasts']}
-👥 Пользователей: {today['unique_users']}
-💬 Групп: {today['unique_groups']}
+Последние 3 дня:"""
 
-Топ триггеров:"""
+        for day in last_days:
+            summary += f"\n{day['date']}: 🔥 {day['roasts']}"
+
+        summary += "\n\nТоп-5 триггеров:"
 
         for i, (trigger, count) in enumerate(top_triggers.items(), 1):
             summary += f"\n{i}. '{trigger}' - {count} раз"
 
         return summary
 
-    def get_detailed_stats(self) -> str:
+    def get_admin_stats(self) -> str:
         """Получить детальную статистику для админов"""
         total = self.get_total_stats()
-        today = self.get_daily_stats()
-        top_triggers = self.get_top_triggers(10)
+        top_triggers = self.get_top_triggers(limit=30)
+        last_days = self.get_daily_stats(days=7)
 
-        # Последние 7 дней
-        weekly_stats = []
-        for i in range(7):
-            from datetime import timedelta
-
-            date = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
-            day_stats = self.get_daily_stats(date)
-            weekly_stats.append(day_stats)
-
-        detailed = f"""📊 Детальная статистика бота
+        detailed = f"""📊 Статистика по всем чатам
 
 🔥 Всего подъёбов: {total['total_roasts']}
-👥 Уникальных пользователей: {total['unique_users']}
-💬 Уникальных групп: {total['unique_groups']}
+👥 Уникальных пользователей: {total['total_roasted_users']}
+💬 Уникальных групп: {total['unique_chats']}
 📅 Дней активности: {total['days_active']}
-🚀 Запущен: {total['start_date'][:10]}
 
 Активность за последние 7 дней:"""
 
-        for day in weekly_stats:
-            detailed += f"\n{day['date']}: {day['roasts']} подъёбов"
+        for day in last_days:
+            detailed += f"\n{day['date']}: 🔥 {day['roasts']} 👥 {day['unique_users']}"
 
         detailed += "\n\nТоп-10 триггеров:"
         for i, (trigger, count) in enumerate(top_triggers.items(), 1):
             detailed += f"\n{i}. '{trigger}' - {count} раз"
 
         return detailed
-
-    def clear_stats(self):
-        """Очистить статистику"""
-        self.stats = {
-            "total_roasts": 0,
-            "unique_users": set(),
-            "unique_groups": set(),
-            "daily_stats": {},
-            "trigger_stats": {},
-            "start_date": datetime.now().isoformat(),
-        }
-        self._save_stats()
-
-    def export_stats(self) -> dict:
-        """Экспорт статистики в формате для JSON"""
-        data_to_export = self.stats.copy()
-        data_to_export["unique_users"] = list(self.stats["unique_users"])
-        data_to_export["unique_groups"] = list(self.stats["unique_groups"])
-
-        # Преобразуем дневную статистику
-        daily_stats_export = {}
-        for date, day_data in self.stats["daily_stats"].items():
-            daily_stats_export[date] = {
-                "roasts": day_data.get("roasts", 0),
-                "users": list(day_data.get("users", set())),
-                "groups": list(day_data.get("groups", set())),
-            }
-        data_to_export["daily_stats"] = daily_stats_export
-
-        return data_to_export

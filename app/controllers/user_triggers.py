@@ -14,8 +14,8 @@ from app.models import CustomTrigger
 
 class UserTriggerManager:
     # Настройки модерации
-    MAX_TRIGGERS_PER_USER_PER_DAY = 3
-    MAX_TRIGGERS_PER_CHAT = 50
+    MAX_TRIGGERS_PER_USER_PER_DAY = 999999
+    MAX_TRIGGERS_PER_CHAT = 999999
     MIN_TRIGGER_LENGTH = 2
     MIN_RESPONSE_LENGTH = 1
     MAX_TRIGGER_LENGTH = 100
@@ -291,11 +291,8 @@ class UserTriggerManager:
                 or 0
             )
 
-            remaining_today = max(0, self.MAX_TRIGGERS_PER_USER_PER_DAY - today_added)
-
             return (
                 "📊 **Ваша статистика:**\n\n"
                 f"🎯 Всего создано триггеров: {total_added}\n"
                 f"📅 Создано сегодня: {today_added}\n"
-                f"⏰ Осталось на сегодня: {remaining_today}"
             )

@@ -11,7 +11,7 @@ chat_stats_router = Router()
 @chat_stats_router.message(Command("stats"))
 async def show_stats(message: Message):
     """Показать общую статистику бота"""
-    stats_text = bot_stats.get_stats_summary()
+    stats_text = bot_stats.get_chat_stats_summary(message.chat.id)
     escaped_stats = escape_markdown(stats_text)
     await message.answer(escaped_stats, parse_mode="MarkdownV2")
 
@@ -19,30 +19,16 @@ async def show_stats(message: Message):
 @chat_stats_router.message(Command("top"))
 async def show_top_triggers(message: Message):
     """Показать топ триггеров"""
-    top = bot_stats.get_top_triggers(10)
+    top = bot_stats.get_top_triggers(message.chat.id)
     if not top:
         await message.answer(
             "📊 Пока нет статистики по триггерам", parse_mode="MarkdownV2"
         )
         return
 
-    text = "🏆 *Топ-10 триггеров:*\n\n"
+    text = "🏆 *Топ-10 триггеров:*\n"
     for i, (trigger, count) in enumerate(top.items(), 1):
-        text += f"{i}. '{trigger}' - {count} раз"
+        text += f"\n{i}. '{trigger}' - {count} раз"
 
     escaped_text = escape_markdown(text)
     await message.answer(escaped_text, parse_mode="MarkdownV2")
-
-
-@chat_stats_router.message(Command("today"))
-async def show_today_stats(message: Message):
-    """Показать статистику за сегодня"""
-    today = bot_stats.get_daily_stats()
-
-    text = f"""📅 *Статистика за сегодня* \\({escape_markdown(today['date'])}\\)
-
-🔥 Подъёбов: {today['roasts']}
-👥 Пользователей: {today['unique_users']}
-💬 Групп: {today['unique_groups']}"""
-
-    await message.answer(text, parse_mode="MarkdownV2")

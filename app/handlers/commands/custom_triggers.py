@@ -18,10 +18,6 @@ async def add_trigger(message: Message):
     if not message.text:
         return
 
-    # ДЛЯ ПРЕМИУМ-ПОЛЬЗОВАТЕЛЕЙ УБИРАЕМ ВСЕ ЛИМИТЫ
-    user_trigger_manager.MAX_TRIGGERS_PER_USER_PER_DAY = 999999  # Безлимит
-    user_trigger_manager.MAX_TRIGGERS_PER_CHAT = 999999  # Безлимит
-
     # Парсим команду с помощью регулярного выражения для извлечения "фраза" "ответ"
     pattern = r'/add\s+"([^"]+)"\s+"([^"]+)"'
     match = re.match(pattern, message.text)
@@ -46,7 +42,7 @@ async def add_trigger(message: Message):
 
     # Добавляем информацию о премиум-статусе
     if success:
-        msg += "\n\n⭐ *Премиум-пользователь:* безлимитное добавление триггеров!"
+        msg += "\n\n⭐ *Премиум:* безлимитное добавление триггеров!"
 
     escaped_msg = escape_markdown(msg)
     await message.answer(escaped_msg, parse_mode="MarkdownV2")
@@ -92,14 +88,14 @@ async def list_triggers(message: Message):
     await message.answer(escaped_list, parse_mode="MarkdownV2")
 
 
-@custom_triggers_router.message(Command("my_triggers"))
+# @custom_triggers_router.message(Command("my_triggers"))
 @premium_only
 async def my_triggers_stats(message: Message):
     """Показать статистику пользователя по триггерам"""
     stats = user_trigger_manager.get_user_stats(message.from_user.id)
 
     # Добавляем информацию о премиум-статусе
-    stats += "\n\n⭐ *Премиум-статус активен!*\n• Безлимитное добавление триггеров\n• Приоритетная обработка"
+    stats += "\n⭐ *Премиум-статус активен!*\n• Безлимитное добавление триггеров\n• Приоритетная обработка"
 
     escaped_stats = escape_markdown(stats)
     await message.answer(escaped_stats, parse_mode="MarkdownV2")
