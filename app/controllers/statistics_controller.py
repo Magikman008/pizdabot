@@ -50,7 +50,7 @@ class BotStatistics:
             session.commit()
 
     def get_total_stats(
-            self, chat_id: int | None = None
+        self, chat_id: int | None = None
     ) -> Dict[str, int | str | None]:
         """
         Общая статистика:
@@ -73,8 +73,12 @@ class BotStatistics:
             )
 
             if chat_id is not None:
-                total_roasts_stmt = total_roasts_stmt.where(RoastEvent.chat_id == chat_id)
-                unique_users_stmt = unique_users_stmt.where(RoastEvent.chat_id == chat_id)
+                total_roasts_stmt = total_roasts_stmt.where(
+                    RoastEvent.chat_id == chat_id
+                )
+                unique_users_stmt = unique_users_stmt.where(
+                    RoastEvent.chat_id == chat_id
+                )
                 days_active_stmt = days_active_stmt.where(RoastEvent.chat_id == chat_id)
                 first_roast_stmt = first_roast_stmt.where(RoastEvent.chat_id == chat_id)
 
@@ -125,7 +129,7 @@ class BotStatistics:
         return {word: count for word, count in result}
 
     def get_daily_stats(
-            self, chat_id: int | None = None, days: int = 1
+        self, chat_id: int | None = None, days: int = 1
     ) -> list[dict[str, int | str]]:
         """
         Статистика по дням.
@@ -133,7 +137,9 @@ class BotStatistics:
         - Если days>1 — возвращает статистику за последние N дней
         - Если chat_id=None — считаем по всем чатам
         """
-        end = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        end = datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ) + timedelta(days=1)
         start = end - timedelta(days=days)
 
         with self.session_maker() as session:
