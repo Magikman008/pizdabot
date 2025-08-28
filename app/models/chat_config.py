@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import Column, BigInteger, Boolean, Integer, DateTime
 
-from .base import Base
+from app.models import Base
 
 
 class ChatConfig(Base):
