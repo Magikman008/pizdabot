@@ -123,7 +123,7 @@ class SubscriptionManager:
         Returns:
             str: Описание подписки
         """
-        return f"""⭐ **Премиум-подписка PizdaBot**
+        return f"""⭐ **Премиум-подписка Подъёбыш**
 
 💰 **Цена:** {self.SUBSCRIPTION_PRICE_STARS} звёздочка Telegram
 ⏱️ **Длительность:** {self.SUBSCRIPTION_DURATION_DAYS} дней
