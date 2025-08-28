@@ -2,3 +2,4 @@ aiogram==3.22.0
 black==25.1.0
 sqlalchemy==2.0.43
 alembic==1.16.4
+pymysql==1.1.2

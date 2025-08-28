@@ -10,7 +10,7 @@ class RoastWord(Base):
     __tablename__ = "roast_words"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    word = Column(String, nullable=False, unique=True)  # уникальное слово
+    word = Column(String(255), nullable=False, unique=True)  # уникальное слово
 
     # связь к событиям
     events = relationship("RoastEvent", back_populates="word")

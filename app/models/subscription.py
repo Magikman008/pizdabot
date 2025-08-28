@@ -31,7 +31,7 @@ class Transaction(Base):
     subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=False)
     who_bought_id = Column(Integer, nullable=True)
 
-    transaction_id = Column(String, unique=True, nullable=False)
+    transaction_id = Column(String(512), unique=True, nullable=False)
     amount_stars = Column(Numeric(10, 2), nullable=False)
     timestamp = Column(DateTime, default=datetime.now)
     type = Column(Enum(SubscriptionType), nullable=False)

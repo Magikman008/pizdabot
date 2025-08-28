@@ -9,8 +9,8 @@ class CustomTrigger(Base):
     __tablename__ = "custom_triggers"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    trigger_word = Column(String, nullable=False)
-    response = Column(String, nullable=False)
+    trigger_word = Column(String(255), nullable=False)
+    response = Column(String(255), nullable=False)
     chat_id = Column(BigInteger, nullable=False)
     author_id = Column(BigInteger, nullable=False)
     created = Column(Date, default=date.today(), nullable=False)
