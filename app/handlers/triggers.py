@@ -49,11 +49,11 @@ async def handle_triggers(message: Message):
                 len(text) == len(trigger_lower)
                 or text[-(len(trigger_lower) + 1)] in " .,!?;:"
             ):
+                await message.answer(response)
                 # Записываем статистику
                 bot_stats.add_roast(
                     user_id=message.from_user.id,
                     chat_id=message.chat.id,
                     trigger=trigger,
                 )
-                await message.answer(response)
                 return  # Отвечаем только на первый найденный триггер
