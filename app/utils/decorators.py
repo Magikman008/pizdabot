@@ -27,7 +27,7 @@ def premium_only(handler):
             keyboard = subscription_manager.create_subscription_keyboard()
             await message.answer(
                 "⭐ *Эта функция доступна только подписчикам\\!*\n\n"
-                f"Купите премиум\\-подписку за {subscription_manager.SUBSCRIPTION_PRICE_STARS} ⭐ чтобы добавлять свои триггеры:",
+                f"Купите премиум\\-подписку за {subscription_manager.SUBSCRIPTION_PRICE_STARS} ⭐",
                 reply_markup=keyboard,
                 parse_mode="MarkdownV2",
             )
