@@ -23,7 +23,7 @@ class RoastEvent(Base):
     chat_id = Column(BigInteger, nullable=False)
     user_id = Column(BigInteger, nullable=False)
     word_id = Column(Integer, ForeignKey("roast_words.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.now(), nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
 
     # связь к слову
     word = relationship("RoastWord", back_populates="events")

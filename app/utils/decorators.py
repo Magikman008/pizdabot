@@ -10,10 +10,6 @@ def admin_only(handler):
     @wraps(handler)
     async def wrapper(message: Message, *args, **kwargs):
         if not is_admin(message):
-            await message.answer(
-                "❌ Эта команда доступна только администраторам!",
-                parse_mode="MarkdownV2",
-            )
             return
         return await handler(message, *args, **kwargs)
 
