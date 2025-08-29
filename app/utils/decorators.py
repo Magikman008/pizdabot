@@ -19,7 +19,7 @@ def admin_only(handler):
 def premium_only(handler):
     @wraps(handler)
     async def wrapper(message: Message, *args, **kwargs):
-        if not has_premium_access(message.from_user.id):
+        if not has_premium_access(message.chat.id):
             keyboard = subscription_manager.create_subscription_keyboard(message)
             await message.answer(
                 "⭐ *Эта функция доступна только подписчикам\\!*\n\n"
