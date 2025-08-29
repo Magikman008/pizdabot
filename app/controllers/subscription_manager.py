@@ -6,6 +6,7 @@
 from datetime import datetime, timedelta
 from typing import Dict, Tuple
 
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy.orm import Session
 
 from app.models import Subscription, Transaction, SubscriptionType
@@ -157,3 +158,19 @@ class SubscriptionManager:
                 session.query(Subscription).filter(Subscription.expires_at > now).all()
             )
         return {sub.tg_chat_id: sub for sub in subs}
+
+    def create_subscription_keyboard(self, message: Message) -> InlineKeyboardMarkup:
+        buy_button = InlineKeyboardButton(
+            text=f"⭐ Купить подписку за {SubscriptionManager.SUBSCRIPTION_PRICE_STARS} звёздочку",
+            callback_data=f"buy_subscription:{message.from_user.id}:{message.chat.id}:{SubscriptionManager.SUBSCRIPTION_PRICE_STARS}",
+        )
+
+        # Кнопка информации
+        info_button = InlineKeyboardButton(
+            text="ℹ️ Информация о подписке",
+            callback_data=f"subscription_info:{message.chat.id}",
+        )
+
+        return InlineKeyboardMarkup(
+            inline_keyboard=[[buy_button], [info_button]]
+        )

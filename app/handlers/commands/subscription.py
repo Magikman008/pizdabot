@@ -5,12 +5,10 @@ from aiogram.types import (
     LabeledPrice,
     CallbackQuery,
     PreCheckoutQuery,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
 )
 
 from app.bot import bot
-from app.controllers import subscription_manager, SubscriptionManager
+from app.controllers import subscription_manager
 from app.logger import logger
 from app.utils.decorators import premium_only
 from app.utils.tools import escape_markdown
@@ -24,23 +22,9 @@ async def show_subscription_info(message: Message):
     """Показать информацию о подписке и возможность покупки"""
     description = subscription_manager.get_subscription_description()
 
-    # Кнопка покупки подписки за звёздочки
-    buy_button = InlineKeyboardButton(
-        text=f"⭐ Купить подписку за {SubscriptionManager.SUBSCRIPTION_PRICE_STARS} звёздочку",
-        callback_data=f"buy_subscription:{message.from_user.id}:{message.chat.id}:{SubscriptionManager.SUBSCRIPTION_PRICE_STARS}",
-    )
-
-    # Кнопка информации
-    info_button = InlineKeyboardButton(
-        text="ℹ️ Информация о подписке",
-        callback_data=f"subscription_info:{message.chat.id}",
-    )
-
     await message.answer(
         escape_markdown(description),
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[[buy_button], [info_button]]
-        ),
+        reply_markup=subscription_manager.create_subscription_keyboard(),
         parse_mode="MarkdownV2",
     )
 

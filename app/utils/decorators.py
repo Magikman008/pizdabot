@@ -20,7 +20,7 @@ def premium_only(handler):
     @wraps(handler)
     async def wrapper(message: Message, *args, **kwargs):
         if not has_premium_access(message.from_user.id):
-            keyboard = subscription_manager.create_subscription_keyboard()
+            keyboard = subscription_manager.create_subscription_keyboard(message)
             await message.answer(
                 "⭐ *Эта функция доступна только подписчикам\\!*\n\n"
                 f"Купите премиум\\-подписку за {subscription_manager.SUBSCRIPTION_PRICE_STARS} ⭐",

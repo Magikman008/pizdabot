@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Numeric
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Numeric, BigInteger
 from sqlalchemy.orm import relationship
 
 from app.models import Base
@@ -16,7 +16,7 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    tg_chat_id = Column(Integer, nullable=True)
+    tg_chat_id = Column(BigInteger, nullable=True)
 
     activated_at = Column(DateTime, default=datetime.now)
     expires_at = Column(DateTime, nullable=False)
@@ -29,7 +29,7 @@ class Transaction(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=False)
-    who_bought_id = Column(Integer, nullable=True)
+    who_bought_id = Column(BigInteger, nullable=True)
 
     transaction_id = Column(String(512), unique=True, nullable=False)
     amount_stars = Column(Numeric(10, 2), nullable=False)
