@@ -1,20 +1,36 @@
+"""
+Обработчик триггеров - ИСПРАВЛЕННАЯ версия
+Добавлена поддержка FSM состояний для системы обратной связи
+"""
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from app.controllers import user_trigger_manager, chat_settings_manager, bot_stats
+from app.states import FeedbackStates
 from triggers import russian_swear_triggers
 
 base_trigger_router = Router()
 
 
 @base_trigger_router.message(F.text, ~F.text.startswith(("/")))
-async def handle_triggers(message: Message):
+async def handle_triggers(message: Message, state: FSMContext):
     """
     Обработка триггеров в конце сообщений
-    Сначала проверяет настройки чата, потом пользовательские триггеры, потом глобальные
+    ИСПРАВЛЕНО: Проверяет FSM состояние перед обработкой
     """
     if not message.text:
         return
+
+    # КРИТИЧЕСКИ ВАЖНО: Проверяем, не находится ли пользователь в процессе обратной связи
+    current_state = await state.get_state()
+    if current_state in [
+        FeedbackStates.waiting_for_message.state,
+        FeedbackStates.confirming_send.state
+    ]:
+        print(
+            f"⏭️ Пропускаем триггеры для пользователя {message.from_user.id} - в процессе feedback")
+        return  # НЕ обрабатываем триггеры во время процесса обратной связи
 
     # ПРОВЕРЯЕМ НАСТРОЙКИ ЧАТА - должен ли бот отвечать
     if not chat_settings_manager.should_respond(message.chat.id):
@@ -46,8 +62,8 @@ async def handle_triggers(message: Message):
             # Дополнительная проверка: триггер должен быть отдельным словом/фразой
             # (не частью другого слова)
             if (
-                len(text) == len(trigger_lower)
-                or text[-(len(trigger_lower) + 1)] in " .,!?;:"
+                    len(text) == len(trigger_lower)
+                    or text[-(len(trigger_lower) + 1)] in " .,!?;:"
             ):
                 await message.answer(response)
                 # Записываем статистику
