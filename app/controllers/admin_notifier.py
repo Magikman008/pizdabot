@@ -55,7 +55,7 @@ class AdminNotifier:
                     await bot.send_message(
                         chat_id=chat_id,
                         text=notification_text,
-                        parse_mode="HTML"
+                        parse_mode="markdownV2"
                     )
                     successful_notifications += 1
                     print(f"✅ Уведомление отправлено админу @{admin_username}")
@@ -96,7 +96,7 @@ class AdminNotifier:
                     await bot.send_message(
                         chat_id=chat_id,
                         text=stats_text,
-                        parse_mode="HTML"
+                        parse_mode="markdownV2"
                     )
 
             except Exception as e:

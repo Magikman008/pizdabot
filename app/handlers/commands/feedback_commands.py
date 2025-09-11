@@ -3,7 +3,7 @@
 Обработчики команд для отправки и управления обращениями пользователей
 ОБНОВЛЕНО: принимает любые текстовые сообщения, не только команды
 """
-from typing import Dict, List, Optional, Any
+from typing import Dict
 import asyncio
 from datetime import datetime
 
@@ -15,6 +15,7 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, C
 from app.controllers.feedback_manager import feedback_manager
 from app.states import FeedbackStates
 from app.bot import bot
+from app.utils.tools import escape_markdown, is_admin
 from settings import ADMIN_USERNAMES
 
 # Создаем роутер для системы обратной связи
@@ -23,20 +24,6 @@ feedback_router = Router(name="feedback_system")
 # Хранилище для chat_id администраторов
 _admin_chat_registry: Dict[str, int] = {}
 
-def escape_markdown_v2(text: str) -> str:
-    """
-    Экранирование специальных символов для MarkdownV2
-    """
-    special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-    for char in special_chars:
-        text = text.replace(char, f'\\{char}')
-    return text
-
-def is_admin(username: str) -> bool:
-    """
-    Проверить, является ли пользователь администратором
-    """
-    return username and username in ADMIN_USERNAMES
 
 async def register_admin_chat_id(username: str, chat_id: int) -> None:
     """
@@ -63,14 +50,14 @@ async def notify_admins_about_new_feedback(
         return 0
 
     # Подготавливаем текст уведомления в MarkdownV2
-    escaped_user = escape_markdown_v2(user_display)
-    escaped_preview = escape_markdown_v2(message_preview)
-    escaped_id = escape_markdown_v2(str(feedback_id))
+    escaped_user = escape_markdown(user_display)
+    escaped_preview = escape_markdown(message_preview)
+    escaped_id = escape_markdown(str(feedback_id))
 
     notification_text = (
         f"🔔 *Новое обращение \\#{escaped_id}*\n\n"
         f"👤 *От:* {escaped_user}\n"
-        f"📅 *Время:* {escape_markdown_v2(datetime.now().strftime('%Y-%m-%d %H:%M'))}\n\n"
+        f"📅 *Время:* {escape_markdown(datetime.now().strftime('%Y-%m-%d %H:%M'))}\n\n"
         f"💬 *Сообщение:*\n```\n{escaped_preview}\n```\n\n"
         f"_Используйте /feedback\\_detail {escaped_id} для просмотра полного текста_"
     )
@@ -158,7 +145,7 @@ async def process_feedback_message(message: Message, state: FSMContext):
         await message.answer(
             "❌ *Сообщение слишком длинное*\n\n"
             "Максимум 2000 символов\\.\n"
-            f"_Сейчас: {escape_markdown_v2(str(len(message_text)))} символов_",
+            f"_Сейчас: {escape_markdown(str(len(message_text)))} символов_",
             parse_mode="MarkdownV2"
         )
         return
@@ -185,8 +172,8 @@ async def process_feedback_message(message: Message, state: FSMContext):
         user_display = f"User {user_id}"
 
     # Создаем превью сообщения с экранированием для MarkdownV2
-    escaped_user = escape_markdown_v2(user_display)
-    escaped_message = escape_markdown_v2(message_text)
+    escaped_user = escape_markdown(user_display)
+    escaped_message = escape_markdown(message_text)
 
     preview_text = (
         f"📋 *Предварительный просмотр вашего обращения:*\n\n"
@@ -240,7 +227,7 @@ async def process_non_text_feedback_message(message: Message, state: FSMContext)
 
     await message.answer(
         f"❌ *Неподдерживаемый тип сообщения*\n\n"
-        f"Вы отправили: _{escape_markdown_v2(message_type)}_\n\n"
+        f"Вы отправили: _{escape_markdown(message_type)}_\n\n"
         f"Пожалуйста, отправьте *обычный текст* для обращения\\.\n"
         f"Изображения и видео прикрепляйте как ссылки в тексте\\.\n\n"
         f"_Или напишите 'отмена' для выхода_",
@@ -268,7 +255,7 @@ async def confirm_feedback_submission(callback: CallbackQuery, state: FSMContext
 
     if feedback_id:
         # Успешное сохранение
-        escaped_id = escape_markdown_v2(str(feedback_id))
+        escaped_id = escape_markdown(str(feedback_id))
         success_text = (
             f"✅ *Обращение отправлено\\!*\n\n"
             f"📋 *ID обращения:* \\#{escaped_id}\n\n"
@@ -345,7 +332,7 @@ async def cmd_admin_register(message: Message):
     """
     username = message.from_user.username
 
-    if not is_admin(username):
+    if not is_admin(message):
         await message.answer(
             "❌ *Эта команда доступна только администраторам*",
             parse_mode="MarkdownV2"
@@ -355,8 +342,8 @@ async def cmd_admin_register(message: Message):
     # Регистрируем администратора
     await register_admin_chat_id(username, message.chat.id)
 
-    escaped_username = escape_markdown_v2(username)
-    escaped_chat_id = escape_markdown_v2(str(message.chat.id))
+    escaped_username = escape_markdown(username)
+    escaped_chat_id = escape_markdown(str(message.chat.id))
 
     registration_text = (
         f"✅ *Вы зарегистрированы как администратор\\!*\n\n"
@@ -377,7 +364,7 @@ async def cmd_admin_feedback(message: Message):
     """
     username = message.from_user.username
 
-    if not is_admin(username):
+    if not is_admin(message):
         await message.answer(
             "❌ *Эта команда доступна только администраторам*",
             parse_mode="MarkdownV2"
@@ -403,12 +390,12 @@ async def cmd_admin_feedback(message: Message):
         return
 
     # Формируем список обращений
-    escaped_total = escape_markdown_v2(str(len(feedbacks)))
-    escaped_unread = escape_markdown_v2(str(unread_count))
+    escaped_total = escape_markdown(str(len(feedbacks)))
+    escaped_unread = escape_markdown(str(unread_count))
 
     response_text = (
         f"📬 *Обращения пользователей*\n\n"
-        f"📊 *Всего:* {escaped_total} \\| 🔔 *Непрочитанных:* {escaped_unread}\n\n"
+        f"📊 *Всего:* {escaped_total} | 🔔 *Непрочитанных:* {escaped_unread}\n\n"
     )
 
     for feedback in feedbacks[:10]:
@@ -428,24 +415,18 @@ async def cmd_admin_feedback(message: Message):
         # Дата создания
         created_at = feedback['created_at'][:16].replace('T', ' ')
 
-        # Экранируем все для MarkdownV2
-        escaped_id = escape_markdown_v2(str(feedback['id']))
-        escaped_user = escape_markdown_v2(user_display)
-        escaped_date = escape_markdown_v2(created_at)
-        escaped_preview = escape_markdown_v2(message_preview)
-
         response_text += (
-            f"{status} *\\#{escaped_id}* \\| {escaped_user}\n"
-            f"📅 {escaped_date}\n"
-            f"💬 {escaped_preview}\n\n"
+            f"{status} *#{str(feedback['id'])}* | {user_display}\n"
+            f"📅 {created_at}\n"
+            f"💬 {message_preview}\n\n"
         )
 
     response_text += (
-        "_Используйте /feedback\\_detail \\[ID] для просмотра полного текста_"
+        "Используйте /feedback_detail [ID] для просмотра полного текста"
     )
 
     await message.answer(
-        text=response_text,
+        text=escape_markdown(response_text),
         parse_mode="MarkdownV2"
     )
 
@@ -456,7 +437,7 @@ async def cmd_feedback_detail(message: Message):
     """
     username = message.from_user.username
 
-    if not is_admin(username):
+    if not is_admin(message):
         await message.answer(
             "❌ *Эта команда доступна только администраторам*",
             parse_mode="MarkdownV2"
@@ -481,7 +462,7 @@ async def cmd_feedback_detail(message: Message):
         feedback_data = feedback_manager.get_feedback_by_id(feedback_id)
 
         if not feedback_data:
-            escaped_id = escape_markdown_v2(str(feedback_id))
+            escaped_id = escape_markdown(str(feedback_id))
             await message.answer(
                 f"❌ *Обращение \\#{escaped_id} не найдено*",
                 parse_mode="MarkdownV2"
@@ -500,11 +481,11 @@ async def cmd_feedback_detail(message: Message):
         created_at = feedback_data['created_at'][:16].replace('T', ' ')
 
         # Экранируем для MarkdownV2
-        escaped_id = escape_markdown_v2(str(feedback_data['id']))
-        escaped_user = escape_markdown_v2(user_display)
-        escaped_date = escape_markdown_v2(created_at)
-        escaped_status = escape_markdown_v2(status_text)
-        escaped_message = escape_markdown_v2(feedback_data['message'])
+        escaped_id = escape_markdown(str(feedback_data['id']))
+        escaped_user = escape_markdown(user_display)
+        escaped_date = escape_markdown(created_at)
+        escaped_status = escape_markdown(status_text)
+        escaped_message = escape_markdown(feedback_data['message'])
 
         detail_text = (
             f"📋 *Обращение \\#{escaped_id}*\n\n"
@@ -527,7 +508,7 @@ async def cmd_feedback_detail(message: Message):
             parse_mode="MarkdownV2"
         )
     except Exception as e:
-        escaped_error = escape_markdown_v2(str(e))
+        escaped_error = escape_markdown(str(e))
         await message.answer(
             f"❌ *Ошибка при получении обращения:*\n{escaped_error}",
             parse_mode="MarkdownV2"
@@ -540,7 +521,7 @@ async def cmd_feedback_stats(message: Message):
     """
     username = message.from_user.username
 
-    if not is_admin(username):
+    if not is_admin(message):
         await message.answer(
             "❌ *Эта команда доступна только администраторам*",
             parse_mode="MarkdownV2"
@@ -554,10 +535,10 @@ async def cmd_feedback_stats(message: Message):
     stats = feedback_manager.get_stats()
 
     # Экранируем числовые значения
-    escaped_total = escape_markdown_v2(str(stats['total_count']))
-    escaped_unread = escape_markdown_v2(str(stats['unread_count']))
-    escaped_read = escape_markdown_v2(str(stats['read_count']))
-    escaped_users = escape_markdown_v2(str(stats['unique_users']))
+    escaped_total = escape_markdown(str(stats['total_count']))
+    escaped_unread = escape_markdown(str(stats['unread_count']))
+    escaped_read = escape_markdown(str(stats['read_count']))
+    escaped_users = escape_markdown(str(stats['unique_users']))
 
     stats_text = (
         f"📊 *Статистика обращений*\n\n"
@@ -569,7 +550,7 @@ async def cmd_feedback_stats(message: Message):
 
     if stats['last_feedback_date']:
         last_date = stats['last_feedback_date'][:16].replace('T', ' ')
-        escaped_date = escape_markdown_v2(last_date)
+        escaped_date = escape_markdown(last_date)
         stats_text += f"🕐 *Последнее обращение:* {escaped_date}"
     else:
         stats_text += "🕐 *Обращений пока нет*"

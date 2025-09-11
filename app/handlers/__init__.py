@@ -6,7 +6,7 @@ from aiogram import Router
 
 from app.handlers import triggers
 from app.handlers.commands import commands_router
-from app.handlers.feedback import feedback_router
+from app.handlers.commands.feedback_commands import feedback_router
 
 # Создаем главный роутер
 router = Router()
