@@ -12,6 +12,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
+from app.controllers.admin_notifier import admin_notifier
 from app.controllers.feedback_manager import feedback_manager
 from app.states import FeedbackStates
 from app.bot import bot
@@ -24,14 +25,6 @@ feedback_router = Router(name="feedback_system")
 # Хранилище для chat_id администраторов
 _admin_chat_registry: Dict[str, int] = {}
 
-
-async def register_admin_chat_id(username: str, chat_id: int) -> None:
-    """
-    Зарегистрировать chat_id администратора для уведомлений
-    """
-    global _admin_chat_registry
-    _admin_chat_registry[username] = chat_id
-    print(f"🔧 Админ @{username} зарегистрирован с chat_id: {chat_id}")
 
 async def notify_admins_about_new_feedback(
     feedback_id: int,
@@ -325,110 +318,6 @@ async def cancel_feedback_submission(callback: CallbackQuery, state: FSMContext)
     await state.clear()
     await callback.answer()
 
-@feedback_router.message(Command("admin_register"))
-async def cmd_admin_register(message: Message):
-    """
-    Регистрация администратора для получения уведомлений
-    """
-    username = message.from_user.username
-
-    if not is_admin(message):
-        await message.answer(
-            "❌ *Эта команда доступна только администраторам*",
-            parse_mode="MarkdownV2"
-        )
-        return
-
-    # Регистрируем администратора
-    await register_admin_chat_id(username, message.chat.id)
-
-    escaped_username = escape_markdown(username)
-    escaped_chat_id = escape_markdown(str(message.chat.id))
-
-    registration_text = (
-        f"✅ *Вы зарегистрированы как администратор\\!*\n\n"
-        f"👤 *Username:* @{escaped_username}\n"
-        f"🆔 *Chat ID:* {escaped_chat_id}\n\n"
-        f"Теперь вы будете получать уведомления о новых обращениях\\."
-    )
-
-    await message.answer(
-        text=registration_text,
-        parse_mode="MarkdownV2"
-    )
-
-@feedback_router.message(Command("admin_feedback"))
-async def cmd_admin_feedback(message: Message):
-    """
-    Просмотр всех обращений (только для администраторов)
-    """
-    username = message.from_user.username
-
-    if not is_admin(message):
-        await message.answer(
-            "❌ *Эта команда доступна только администраторам*",
-            parse_mode="MarkdownV2"
-        )
-        return
-
-    # Автоматически регистрируем админа при использовании команды
-    await register_admin_chat_id(username, message.chat.id)
-
-    # Получаем список обращений
-    feedbacks = feedback_manager.get_all_feedback(limit=10)
-    unread_count = feedback_manager.get_unread_count()
-
-    if not feedbacks:
-        empty_text = (
-            "📭 *Обращений пока нет*\n\n"
-            "Пользователи еще не отправляли обратную связь\\."
-        )
-        await message.answer(
-            text=empty_text,
-            parse_mode="MarkdownV2"
-        )
-        return
-
-    # Формируем список обращений
-    escaped_total = escape_markdown(str(len(feedbacks)))
-    escaped_unread = escape_markdown(str(unread_count))
-
-    response_text = (
-        f"📬 *Обращения пользователей*\n\n"
-        f"📊 *Всего:* {escaped_total} | 🔔 *Непрочитанных:* {escaped_unread}\n\n"
-    )
-
-    for feedback in feedbacks[:10]:
-        # Статус обращения
-        status = "🔴" if not feedback['is_read'] else "✅"
-
-        # Отображаемое имя пользователя
-        user_display = feedback.get('username', feedback.get('first_name', f"User {feedback['user_id']}"))
-        if feedback.get('username'):
-            user_display = f"@{user_display}"
-
-        # Превью сообщения
-        message_preview = feedback['message']
-        if len(message_preview) > 100:
-            message_preview = message_preview[:100] + "..."
-
-        # Дата создания
-        created_at = feedback['created_at'][:16].replace('T', ' ')
-
-        response_text += (
-            f"{status} *#{str(feedback['id'])}* | {user_display}\n"
-            f"📅 {created_at}\n"
-            f"💬 {message_preview}\n\n"
-        )
-
-    response_text += (
-        "Используйте /feedback_detail [ID] для просмотра полного текста"
-    )
-
-    await message.answer(
-        text=escape_markdown(response_text),
-        parse_mode="MarkdownV2"
-    )
 
 @feedback_router.message(Command("feedback_detail"))
 async def cmd_feedback_detail(message: Message):
@@ -445,7 +334,7 @@ async def cmd_feedback_detail(message: Message):
         return
 
     # Автоматически регистрируем админа
-    await register_admin_chat_id(username, message.chat.id)
+    await admin_notifier.register_admin(username, message.chat.id)
 
     try:
         # Извлекаем ID из команды
@@ -529,7 +418,7 @@ async def cmd_feedback_stats(message: Message):
         return
 
     # Автоматически регистрируем админа
-    await register_admin_chat_id(username, message.chat.id)
+    await admin_notifier.register_admin(username, message.chat.id)
 
     # Получаем статистику
     stats = feedback_manager.get_stats()

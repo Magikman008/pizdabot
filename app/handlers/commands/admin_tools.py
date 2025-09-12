@@ -8,7 +8,7 @@ from app.controllers import bot_stats, subscription_manager
 from app.controllers.admin_notifier import admin_notifier
 from app.controllers.feedback_manager import feedback_manager
 from app.utils.decorators import admin_only
-from app.utils.tools import escape_markdown
+from app.utils.tools import escape_markdown, is_admin
 
 admin_router = Router()
 
@@ -23,8 +23,8 @@ async def admin_stats(message: Message):
     subscribers = subscription_manager.get_all_subscribers()
     detailed_stats += f"\n\n⭐ Активных подписчиков: {len(subscribers)}"
 
-    escaped_stats = escape_markdown(detailed_stats)
-    await message.answer(escaped_stats, parse_mode="MarkdownV2")
+    text = detailed_stats
+    await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
 
 
 @admin_router.message(Command("subscribers"))
@@ -34,7 +34,8 @@ async def show_subscribers(message: Message):
     subscribers = subscription_manager.get_all_subscribers()
 
     if not subscribers:
-        await message.answer("📋 Активных подписчиков нет", parse_mode="MarkdownV2")
+        text = "📋 Активных подписчиков нет"
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
         return
 
     text = f"👥 *Активные подписчики ({len(subscribers)}):*\n\n"
@@ -46,25 +47,24 @@ async def show_subscribers(message: Message):
         else:
             expires_at_str = str(expires_at)[:16]  # на всякий случай
 
-        escaped_expires = expires_at_str
-        text += f"{i}. ID: {tg_chat_id} (до {escaped_expires})\n"
+        text += f"{i}. ID: {tg_chat_id} (до {expires_at_str})\n"
 
     await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
+
 
 @admin_router.message(Command("admin_register"))
 @admin_only
 async def cmd_admin_register(message: Message):
-
     # Регистрируем администратора
     admin_notifier.register_admin(message.from_user.username, message.chat.id)
 
-    await message.answer(
-        f"✅ **Вы зарегистрированы как администратор!**\n\n"
+    text = (
+        "✅ **Вы зарегистрированы как администратор!**\n\n"
         f"👤 Username: @{message.from_user.username}\n"
         f"🆔 Chat ID: {message.chat.id}\n\n"
-        f"Теперь вы будете получать уведомления о новых обращениях.",
-        parse_mode="markdownV2"
+        "Теперь вы будете получать уведомления о новых обращениях."
     )
+    await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
 
 
 @admin_router.message(Command("feedback_mark_all_read"))
@@ -73,12 +73,11 @@ async def cmd_mark_all_read(message: Message):
     count = feedback_manager.mark_all_as_read()
 
     if count > 0:
-        await message.answer(
-            f"✅ **Отмечено как прочитанные: {count} обращений**",
-            parse_mode="markdownV2"
-        )
+        text = f"✅ **Отмечено как прочитанные: {count} обращений**"
     else:
-        await message.answer("ℹ️ Нет непрочитанных обращений.")
+        text = "ℹ️ Нет непрочитанных обращений."
+
+    await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
 
 
 @admin_router.message(Command("feedback_unread"))
@@ -87,123 +86,167 @@ async def cmd_feedback_unread(message: Message):
     feedbacks = feedback_manager.get_all_feedback(limit=10, unread_only=True)
 
     if not feedbacks:
-        await message.answer(
+        text = (
             "✅ **Нет непрочитанных обращений**\n\n"
-            "Все обращения обработаны!",
-            parse_mode="markdownV2"
+            "Все обращения обработаны!"
         )
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
         return
 
-    response_text = f"🔴 **Непрочитанные обращения ({len(feedbacks)}):**\n\n"
+    text = f"🔴 **Непрочитанные обращения ({len(feedbacks)}):**\n\n"
 
-    for feedback in feedbacks:
-        user_display = feedback.get('username', feedback.get('first_name',
-                                                             f"User {feedback['user_id']}"))
-        if feedback.get('username'):
+    for fb in feedbacks:
+        user_display = fb.get('username', fb.get('first_name', f"User {fb['user_id']}"))
+        if fb.get('username'):
             user_display = f"@{user_display}"
 
-        # Обрезаем длинные сообщения
-        message_preview = feedback['message']
+        message_preview = fb['message']
         if len(message_preview) > 150:
             message_preview = message_preview[:150] + "..."
 
-        created_at = feedback['created_at'][:16].replace('T', ' ')
+        created_at = fb['created_at'][:16].replace('T', ' ')
 
-        response_text += (
-            f"🆔 **#{feedback['id']}** | {user_display}\n"
+        text += (
+            f"🆔 **#{fb['id']}** | {user_display}\n"
             f"📅 {created_at}\n"
             f"💬 {message_preview}\n\n"
         )
 
-    response_text += "*Используйте /feedback_detail [ID] для просмотра*"
-
-    await message.answer(escape_markdown(response_text), parse_mode="markdownV2")
+    text += "*Используйте /feedback_detail [ID] для просмотра*"
+    await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
 
 
 @admin_router.message(Command("feedback_delete"))
 @admin_only
 async def cmd_feedback_delete(message: Message):
     try:
-        # Извлекаем ID из команды
         args = message.text.split()
         if len(args) < 2:
-            await message.answer("❌ Укажите ID обращения. Пример: /feedback_delete 1")
+            text = "❌ Укажите ID обращения. Пример: /feedback_delete 1"
+            await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
             return
 
         feedback_id = int(args[1])
-
-        # Проверяем, существует ли обращение
         feedback_data = feedback_manager.get_feedback_by_id(feedback_id)
         if not feedback_data:
-            await message.answer(f"❌ Обращение #{feedback_id} не найдено.")
+            text = f"❌ Обращение #{feedback_id} не найдено."
+            await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
             return
 
-        # Удаляем обращение
         success = feedback_manager.delete_feedback(feedback_id)
-
         if success:
-            await message.answer(
-                f"✅ **Обращение #{feedback_id} удалено**",
-                parse_mode="markdownV2"
-            )
+            text = f"✅ **Обращение #{feedback_id} удалено**"
         else:
-            await message.answer(f"❌ Ошибка при удалении обращения #{feedback_id}.")
+            text = f"❌ Ошибка при удалении обращения #{feedback_id}."
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
 
     except ValueError:
-        await message.answer("❌ Неверный формат ID. Укажите число.")
+        text = "❌ Неверный формат ID. Укажите число."
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
     except Exception as e:
-        await message.answer(f"❌ Ошибка при удалении обращения: {e}")
+        text = f"❌ Ошибка при удалении обращения: {e}"
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
 
 
 @admin_router.message(Command("feedback_user"))
 @admin_only
 async def cmd_feedback_user(message: Message):
     try:
-        # Извлекаем user_id из команды
         args = message.text.split()
         if len(args) < 2:
-            await message.answer("❌ Укажите user_id. Пример: /feedback_user 123456789")
+            text = "❌ Укажите user_id. Пример: /feedback_user 123456789"
+            await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
             return
 
         user_id = int(args[1])
         feedbacks = feedback_manager.get_feedback_by_user(user_id, limit=10)
-
         if not feedbacks:
-            await message.answer(
-                f"📭 **Обращений от пользователя {user_id} не найдено**")
+            text = f"📭 **Обращений от пользователя {user_id} не найдено**"
+            await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
             return
 
-        # Берем информацию о пользователе из первого обращения
-        first_feedback = feedbacks[0]
-        user_display = first_feedback.get('username', first_feedback.get('first_name',
-                                                                         f"User {user_id}"))
-        if first_feedback.get('username'):
+        first = feedbacks[0]
+        user_display = first.get('username', first.get('first_name', f"User {user_id}"))
+        if first.get('username'):
             user_display = f"@{user_display}"
 
-        response_text = (
+        text = (
             f"👤 **Обращения пользователя {user_display}**\n"
             f"📊 Всего: {len(feedbacks)}\n\n"
         )
 
-        for feedback in feedbacks:
-            status = "🔴" if not feedback['is_read'] else "✅"
-            message_preview = feedback['message']
+        for fb in feedbacks:
+            status = "🔴" if not fb['is_read'] else "✅"
+            message_preview = fb['message']
             if len(message_preview) > 100:
                 message_preview = message_preview[:100] + "..."
-
-            created_at = feedback['created_at'][:16].replace('T', ' ')
-
-            response_text += (
-                f"{status} **#{feedback['id']}** | {created_at}\n"
+            created_at = fb['created_at'][:16].replace('T', ' ')
+            text += (
+                f"{status} **#{fb['id']}** | {created_at}\n"
                 f"💬 {message_preview}\n\n"
             )
 
-        await message.answer(escape_markdown(response_text), parse_mode="markdownV2")
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
 
     except ValueError:
-        await message.answer("❌ Неверный формат user_id. Укажите число.")
+        text = "❌ Неверный формат user_id. Укажите число."
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
     except Exception as e:
-        await message.answer(f"❌ Ошибка при получении обращений: {e}")
+        text = f"❌ Ошибка при получении обращений: {e}"
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
+
+
+@admin_router.message(Command("admin_feedback"))
+@admin_only
+async def cmd_admin_feedback(message: Message):
+    """
+    Просмотр всех обращений (только для администраторов)
+    """
+    username = message.from_user.username
+
+    if not is_admin(message):
+        text = "❌ *Эта команда доступна только администраторам*"
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
+        return
+
+    await admin_notifier.register_admin(username, message.chat.id)
+
+    feedbacks = feedback_manager.get_all_feedback(limit=10)
+    unread_count = feedback_manager.get_unread_count()
+
+    if not feedbacks:
+        text = (
+            "📭 *Обращений пока нет*\n\n"
+            "Пользователи еще не отправляли обратную связь\\."
+        )
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
+        return
+
+    total = escape_markdown(str(len(feedbacks)))
+    unread = escape_markdown(str(unread_count))
+
+    text = (
+        f"📬 *Обращения пользователей*\n\n"
+        f"📊 *Всего:* {total} | 🔔 *Непрочитанных:* {unread}\n\n"
+    )
+
+    for fb in feedbacks[:10]:
+        status = "🔴" if not fb['is_read'] else "✅"
+        user_display = fb.get('username', fb.get('first_name', f"User {fb['user_id']}"))
+        if fb.get('username'):
+            user_display = f"@{user_display}"
+        message_preview = fb['message']
+        if len(message_preview) > 100:
+            message_preview = message_preview[:100] + "..."
+        created_at = fb['created_at'][:16].replace('T', ' ')
+        text += (
+            f"{status} *#{escape_markdown(str(fb['id']))}* | {user_display}\n"
+            f"📅 {created_at}\n"
+            f"💬 {message_preview}\n\n"
+        )
+
+    text += "Используйте /feedback_detail [ID] для просмотра полного текста"
+    await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
 
 
 @admin_router.message(Command("admin_help"))
@@ -228,4 +271,5 @@ async def cmd_admin_help(message: Message):
         "📊 *Дополнительно:*\n"
         "• /admin_help — эта справка\n\n"
     )
-    await message.answer(escape_markdown(help_text), parse_mode="markdownV2")
+    text = help_text
+    await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
