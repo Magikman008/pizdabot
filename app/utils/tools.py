@@ -10,7 +10,7 @@ def escape_markdown(text: str) -> str:
     которые Telegram считает специальными в MarkdownV2.
     """
     # Список всех спецсимволов MarkdownV2
-    special_chars = r"\[]()~`_<>#+-=|{}.!"
+    special_chars = r"+#\[]()~<>=|{}.!"
     # Экранируем каждый спецсимвол обратным слешем
     return "".join(f"\\{ch}" if ch in special_chars else ch for ch in text)
 

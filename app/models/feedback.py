@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Index
+
 from app.models import Base
 
 class Feedback(Base):

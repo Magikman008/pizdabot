@@ -1,107 +1,72 @@
-"""
-Модуль для отправки уведомлений администраторам
-"""
-from typing import List, Dict, Any
+import asyncio
+from typing import List, Optional
+from datetime import datetime
+
+from sqlalchemy.orm import sessionmaker
+from app.db import engine
+from app.models.admin_chat import AdminChat
 from app.bot import bot
-from settings import ADMIN_USERNAMES
+from app.utils.tools import escape_markdown
 
 
 class AdminNotifier:
-    """Класс для отправки уведомлений администраторам"""
-
     def __init__(self):
-        # Словарь для хранения chat_id администраторов
-        # В реальном проекте лучше хранить это в базе данных
-        self.admin_chat_ids: Dict[str, int] = {}
+        self.Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
-    def register_admin(self, username: str, chat_id: int):
+    def register_admin(self, username: str, chat_id: int) -> bool:
         """
-        Зарегистрировать chat_id администратора
-
-        Args:
-            username: Username администратора (без @)
-            chat_id: Telegram chat_id администратора
+        Сохраняет или обновляет запись администратора для получения уведомлений.
         """
-        self.admin_chat_ids[username] = chat_id
-        print(f"Зарегистрирован админ @{username} с chat_id {chat_id}")
+        session = self.Session()
+        try:
+            # Проверяем наличие записи
+            record: Optional[AdminChat] = (
+                session.query(AdminChat)
+                .filter(AdminChat.username == username, AdminChat.chat_id == chat_id)
+                .first()
+            )
+            if record:
+                # Обновляем время регистрации
+                record.registered_at = datetime.utcnow()
+            else:
+                record = AdminChat(username=username, chat_id=chat_id)
+                session.add(record)
+            session.commit()
+            print(f"✅ AdminNotifier: зарегистрирован @{username} (chat_id={chat_id})")
+            return True
+        except Exception as e:
+            session.rollback()
+            print(f"❌ AdminNotifier: ошибка регистрации @{username}: {e}")
+            return False
+        finally:
+            session.close()
 
-    async def notify_new_feedback(self, feedback_id: int, user_display: str,
-                                  message_preview: str):
+    def get_admin_chats(self) -> list[type[AdminChat]]:
         """
-        Отправить уведомление администраторам о новом обращении
-
-        Args:
-            feedback_id: ID обращения
-            user_display: Отображаемое имя пользователя
-            message_preview: Превью сообщения
+        Возвращает все записи администраторов для рассылки уведомлений.
         """
-        if not ADMIN_USERNAMES:
-            print("WARNING: Список ADMIN_USERNAMES пустой, уведомления не отправляются")
-            return
+        session = self.Session()
+        try:
+            return session.query(AdminChat).all()
+        finally:
+            session.close()
 
-        notification_text = (
-            f"🔔 **Новое обращение #{feedback_id}**\n\n"
-            f"👤 **От:** {user_display}\n"
-            f"💬 **Сообщение:**\n{message_preview}\n\n"
-            f"*Используйте /feedback_detail {feedback_id} для просмотра*"
-        )
-
-        successful_notifications = 0
-
-        for admin_username in ADMIN_USERNAMES:
-            try:
-                chat_id = self.admin_chat_ids.get(admin_username)
-                if chat_id:
-                    await bot.send_message(
-                        chat_id=chat_id,
-                        text=notification_text,
-                        parse_mode="markdownV2"
-                    )
-                    successful_notifications += 1
-                    print(f"✅ Уведомление отправлено админу @{admin_username}")
-                else:
-                    print(f"⚠️ Не найден chat_id для админа @{admin_username}")
-                    # Пишем в лог для отладки
-                    print(f"NOTIFICATION for @{admin_username}: {notification_text}")
-
-            except Exception as e:
-                print(f"❌ Ошибка отправки уведомления админу @{admin_username}: {e}")
-
-        print(
-            f"📊 Отправлено уведомлений: {successful_notifications}/{len(ADMIN_USERNAMES)}")
-
-    async def notify_feedback_stats(self, stats: Dict[str, Any]):
+    async def notify_all(self, text: str):
         """
-        Отправить статистику по обращениям администраторам
-
-        Args:
-            stats: Словарь со статистикой
+        Асинхронная рассылка текста всем зарегистрированным администраторам.
         """
-        stats_text = (
-            f"📊 **Еженедельная статистика обращений**\n\n"
-            f"📝 Всего обращений: {stats['total_count']}\n"
-            f"🔴 Непрочитанных: {stats['unread_count']}\n"
-            f"✅ Прочитанных: {stats['read_count']}\n"
-            f"👥 Уникальных пользователей: {stats['unique_users']}"
-        )
+        admins = self.get_admin_chats()
+        tasks = []
+        for admin in admins:
+            tasks.append(bot.send_message(
+                chat_id=admin.chat_id,
+                text=escape_markdown(text),
+                parse_mode="MarkdownV2"
+            ))
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        success = sum(1 for r in results if not isinstance(r, Exception))
+        print(f"📊 Рассылка уведомлений завершена: {success}/{len(admins)}")
+        return success
 
-        if stats['last_feedback_date']:
-            last_date = stats['last_feedback_date'][:16].replace('T', ' ')
-            stats_text += f"\n🕐 Последнее обращение: {last_date}"
-
-        for admin_username in ADMIN_USERNAMES:
-            try:
-                chat_id = self.admin_chat_ids.get(admin_username)
-                if chat_id:
-                    await bot.send_message(
-                        chat_id=chat_id,
-                        text=stats_text,
-                        parse_mode="markdownV2"
-                    )
-
-            except Exception as e:
-                print(f"❌ Ошибка отправки статистики админу @{admin_username}: {e}")
-
-
-# Глобальный экземпляр уведомителя
+# Глобальный экземпляр
 admin_notifier = AdminNotifier()
