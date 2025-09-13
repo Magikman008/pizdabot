@@ -74,10 +74,10 @@ async def process_subscription_purchase(callback: CallbackQuery):
                     prices=[LabeledPrice(label="Премиум подписка", amount=price * 100)],
                     need_name=False,
                     need_phone_number=False,
-                    need_email=False,
+                    need_email=True,
                     need_shipping_address=False,
                     send_phone_number_to_provider=False,
-                    send_email_to_provider=False,
+                    send_email_to_provider=True,
                     is_flexible=False,
                 )
     except Exception as e:
