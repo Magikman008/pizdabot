@@ -1,7 +1,3 @@
-"""
-Состояния для машины состояний (FSM) бота - полностью переписанные
-Расширенные состояния для системы обратной связи
-"""
 from aiogram.fsm.state import State, StatesGroup
 
 class FeedbackStates(StatesGroup):
@@ -10,8 +6,5 @@ class FeedbackStates(StatesGroup):
     Полностью переписанная реализация с дополнительными состояниями
     """
     # Основные состояния для пользователей
-    waiting_for_message = State()    # Ожидание текста обращения от пользователя
-    confirming_send = State()        # Подтверждение отправки обращения
-
-# Совместимость с существующими состояниями проекта
-# (здесь можно добавить другие группы состояний, если нужно)
+    waiting_for_message = State()
+    confirming_send = State()

@@ -62,8 +62,8 @@ async def handle_triggers(message: Message, state: FSMContext):
             # Дополнительная проверка: триггер должен быть отдельным словом/фразой
             # (не частью другого слова)
             if (
-                    len(text) == len(trigger_lower)
-                    or text[-(len(trigger_lower) + 1)] in " .,!?;:"
+                len(text) == len(trigger_lower)
+                or text[-(len(trigger_lower) + 1)] in " .,!?;:"
             ):
                 await message.answer(response)
                 # Записываем статистику

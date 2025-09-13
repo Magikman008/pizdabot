@@ -13,11 +13,3 @@ class AdminChat(Base):
     username = Column(String(64), nullable=False, index=True, unique=False)
     chat_id = Column(BigInteger, nullable=False, index=True)
     registered_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "username": self.username,
-            "chat_id": self.chat_id,
-            "registered_at": self.registered_at.isoformat(),
-        }

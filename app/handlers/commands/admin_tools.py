@@ -4,9 +4,9 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
+from app.controllers import admin_notifier
 from app.controllers import bot_stats, subscription_manager
-from app.controllers.admin_notifier import admin_notifier
-from app.controllers.feedback_manager import feedback_manager
+from app.controllers import feedback_manager
 from app.utils.decorators import admin_only
 from app.utils.tools import escape_markdown, is_admin
 
@@ -96,7 +96,7 @@ async def cmd_feedback_unread(message: Message):
     text = f"🔴 **Непрочитанные обращения ({len(feedbacks)}):**\n\n"
 
     for fb in feedbacks:
-        user_display = fb.get('username', fb.get('first_name', f"User {fb['user_id']}"))
+        user_display = fb.username or fb.first_name or f"User {fb.user_id}"
         if fb.get('username'):
             user_display = f"@{user_display}"
 
@@ -231,18 +231,18 @@ async def cmd_admin_feedback(message: Message):
     )
 
     for fb in feedbacks[:10]:
-        status = "🔴" if not fb['is_read'] else "✅"
-        user_display = fb.get('username', fb.get('first_name', f"User {fb['user_id']}"))
-        if fb.get('username'):
+        status = "🔴" if not fb.is_read else "✅"
+        user_display = fb.username or fb.first_name or f"User {fb.user_id}"
+        if fb.username:
             user_display = f"@{user_display}"
-        message_preview = fb['message']
+        message_preview = fb.message
         if len(message_preview) > 100:
             message_preview = message_preview[:100] + "..."
-        created_at = fb['created_at'][:16].replace('T', ' ')
+        created_at = fb.created_at.isoformat()[:16].replace('T', ' ')
         text += (
-            f"{status} *#{escape_markdown(str(fb['id']))}* | {user_display}\n"
+            f"{status} *#{escape_markdown(str(fb.id))}* | {user_display}\n"
             f"📅 {created_at}\n"
-            f"💬 {message_preview}\n\n"
+            f"💬 {escape_markdown(message_preview)}\n\n"
         )
 
     text += "Используйте /feedback_detail [ID] для просмотра полного текста"

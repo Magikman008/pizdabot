@@ -22,4 +22,5 @@ def is_admin(message: Message) -> bool:
 
 def has_premium_access(user_id: int) -> bool:
     """Проверка наличия премиум-доступа у пользователя"""
-    return subscription_manager.has_active_subscription(user_id)
+    res = subscription_manager.has_active_subscription(user_id)
+    return res

@@ -9,10 +9,11 @@ from datetime import datetime
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, \
+    CallbackQuery
 
-from app.controllers.admin_notifier import admin_notifier
-from app.controllers.feedback_manager import feedback_manager
+from app.controllers import admin_notifier
+from app.controllers import feedback_manager
 from app.states import FeedbackStates
 from app.utils.decorators import admin_only
 from app.utils.tools import escape_markdown

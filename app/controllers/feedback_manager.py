@@ -2,15 +2,14 @@
 Менеджер системы обратной связи - полностью переписанная реализация
 Управление обращениями пользователей с использованием существующей архитектуры проекта
 """
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
-from contextlib import contextmanager
 
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy import desc, func
 
-from app.db import engine
 from app.models.feedback import Feedback
+
 
 class FeedbackManager:
     """
@@ -18,11 +17,8 @@ class FeedbackManager:
     Использует существующую инфраструктуру БД проекта
     """
 
-    def __init__(self):
-        """
-        Инициализация менеджера с подключением к существующей БД
-        """
-        self.Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    def __init__(self, session_maker):
+        self.session_maker = session_maker
         print("📝 FeedbackManager: Подключен к существующей БД")
 
     @contextmanager
@@ -92,7 +88,7 @@ class FeedbackManager:
         limit: int = 50,
         unread_only: bool = False,
         user_id: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+    ):
         """
         Получить список обращений
 
@@ -101,8 +97,7 @@ class FeedbackManager:
             unread_only: Только непрочитанные обращения
             user_id: Фильтр по конкретному пользователю
 
-        Returns:
-            List[Dict]: Список обращений в виде словарей
+            List[Feedback]: Список обращений
         """
         try:
             with self.get_session() as session:
@@ -118,7 +113,7 @@ class FeedbackManager:
                 # Сортируем по дате создания (новые первые)
                 feedbacks = query.order_by(desc(Feedback.created_at)).limit(limit).all()
 
-                result = [feedback.to_dict() for feedback in feedbacks]
+                result = [feedback for feedback in feedbacks]
                 print(f"📋 Получено {len(result)} обращений (лимит: {limit})")
                 return result
 
@@ -144,7 +139,7 @@ class FeedbackManager:
 
                 if feedback:
                     print(f"📋 Получено обращение #{feedback_id}")
-                    return feedback.to_dict()
+                    return feedback
 
                 print(f"❌ Обращение #{feedback_id} не найдено")
                 return None
@@ -340,6 +335,3 @@ class FeedbackManager:
         except Exception as e:
             print(f"❌ Ошибка очистки старых обращений: {e}")
             return 0
-
-# Глобальный экземпляр менеджера (совместимость с существующим кодом)
-feedback_manager = FeedbackManager()

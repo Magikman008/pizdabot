@@ -1,17 +1,15 @@
 import asyncio
-from typing import List, Optional
 from datetime import datetime
+from typing import Optional
 
-from sqlalchemy.orm import sessionmaker
-from app.db import engine
-from app.models.admin_chat import AdminChat
 from app.bot import bot
+from app.models.admin_chat import AdminChat
 from app.utils.tools import escape_markdown
 
 
 class AdminNotifier:
-    def __init__(self):
-        self.Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    def __init__(self, session_maker):
+        self.session_maker = session_maker
 
     def register_admin(self, username: str, chat_id: int) -> bool:
         """
@@ -68,5 +66,4 @@ class AdminNotifier:
         print(f"📊 Рассылка уведомлений завершена: {success}/{len(admins)}")
         return success
 
-# Глобальный экземпляр
-admin_notifier = AdminNotifier()
+

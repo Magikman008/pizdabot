@@ -3,11 +3,11 @@
 Хранение обращений пользователей в базе данных
 """
 from datetime import datetime
-from typing import Dict, Any
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Index
 
 from app.models import Base
+
 
 class Feedback(Base):
     """
@@ -36,21 +36,6 @@ class Feedback(Base):
         Index('idx_feedback_unread_created', 'is_read', 'created_at'),
     )
 
-
-    def to_dict(self) -> Dict[str, Any]:
-        """
-        Преобразование объекта в словарь для JSON-сериализации
-        """
-        return {
-            'id': self.id,
-            'user_id': self.user_id,
-            'username': self.username,
-            'first_name': self.first_name,
-            'last_name': self.last_name,
-            'message': self.message,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'is_read': self.is_read
-        }
 
     def mark_as_read(self) -> None:
         """
