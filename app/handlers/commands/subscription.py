@@ -7,9 +7,11 @@ from aiogram.types import (
     PreCheckoutQuery,
 )
 
+import settings
 from app.bot import bot
 from app.controllers import subscription_manager
 from app.logger import logger
+from app.models import SubscriptionType
 from app.utils.decorators import premium_only
 from app.utils.tools import escape_markdown
 from settings import ADMIN_USERNAMES
@@ -39,21 +41,20 @@ async def process_subscription_purchase(callback: CallbackQuery):
         user_id = int(user_id_str)
         chat_id = int(chat_id_str)
         price = int(price)
-        print(price)
 
         # Создаем инвойс для оплаты звёздочками
         prices = [LabeledPrice(label="Премиум подписка", amount=price * 100)]
 
         match type_name:
-            case "TELEGRAM_STARS":
+            case SubscriptionType.TELEGRAM_STARS.value:
                 await bot.send_invoice(
                     chat_id=callback.message.chat.id,
                     title="⭐ Премиум-подписка Подъёбыш",
                     description=f"Подписка на {subscription_manager.SUBSCRIPTION_DURATION_DAYS} дней с премиум-функциями",
-                    payload=f"subscription:{user_id}:{chat_id}:{price}",
+                    payload=f"subscription:{user_id}:{chat_id}:{type_name}",
                     provider_token="",  # Для звёздочек пусто
                     currency="XTR",
-                    prices=prices,
+                    prices=[LabeledPrice(label="Премиум подписка", amount=price)],
                     need_name=False,
                     need_phone_number=False,
                     need_email=False,
@@ -62,15 +63,15 @@ async def process_subscription_purchase(callback: CallbackQuery):
                     send_email_to_provider=False,
                     is_flexible=False,
                 )
-            case "YOOKASSA":
+            case SubscriptionType.YOOKASSA.value:
                 await bot.send_invoice(
                     chat_id=callback.message.chat.id,
                     title="⭐ Премиум-подписка Подъёбыш",
                     description=f"Подписка на {subscription_manager.SUBSCRIPTION_DURATION_DAYS} дней с премиум-функциями",
-                    payload=f"subscription:{user_id}:{chat_id}:{price}:{type_name}",
-                    provider_token="381764678:TEST:141479",
+                    payload=f"subscription:{user_id}:{chat_id}:{type_name}",
+                    provider_token=settings.yookassa_token,
                     currency="RUB",
-                    prices=prices,
+                    prices=[LabeledPrice(label="Премиум подписка", amount=price * 100)],
                     need_name=False,
                     need_phone_number=False,
                     need_email=False,
@@ -119,18 +120,17 @@ async def successful_payment_handler(message: Message):
         return
 
     try:
-        _, user_id_str, chat_id_str, price_str, type_name = payment.invoice_payload.split(":")
+        _, user_id_str, chat_id_str, type_name = payment.invoice_payload.split(":")
         user_id = int(user_id_str)
         chat_id = int(chat_id_str)
-        price = int(price_str)
 
         # Активируем подписку
         success, msg = subscription_manager.activate_subscription(
             user_id=user_id,
             chat_id=chat_id,
-            price=price,
+            price=payment.total_amount / 100,
             transaction_id=payment.telegram_payment_charge_id,
-            type_name=type_name
+            type_name=type_name,
         )
 
         if success:
@@ -142,36 +142,8 @@ async def successful_payment_handler(message: Message):
                 "❌ Ошибка при активации подписки\\. Обратитесь к администратору\\.",
                 parse_mode="MarkdownV2",
             )
-
     except Exception as e:
         logger.error(f"Ошибка при обработке платежа: {e}")
         await message.answer(
             "❌ Произошла ошибка при обработке платежа\\.", parse_mode="MarkdownV2"
         )
-
-
-# @subscription_router.message(Command("premium"))
-@premium_only
-async def premium_command(message: Message):
-    """Премиум-команда доступная только подписчикам"""
-    # if not has_premium_access(message.from_user.id):
-    #     await message.answer(
-    #         "⭐ *Эта команда доступна только премиум\\-пользователям\\!*\n\n"
-    #         "Используйте /sub для покупки подписки\\.",
-    #         parse_mode="MarkdownV2",
-    #     )
-    #     return
-
-    premium_info = """🌟 *Премиум\\-функции активированы\\!*
-
-🎯 *Доступные возможности:*
-• Добавление пользовательских триггеров
-• Безлимитное количество триггеров
-• Приоритетная обработка сообщений
-• Расширенная статистика
-• Эксклюзивные команды
-• Техническая поддержка
-
-✨ Спасибо за поддержку проекта\\!"""
-
-    await message.answer(escape_markdown(premium_info), parse_mode="MarkdownV2")

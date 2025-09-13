@@ -6,7 +6,7 @@
 from datetime import datetime, timedelta
 from typing import Dict, Tuple
 
-from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy.orm import Session
 
 from app.models import Subscription, Transaction, SubscriptionType
@@ -26,6 +26,17 @@ class SubscriptionManager:
             session (Session): SQLAlchemy сессия
         """
         self.session_maker = session_maker
+
+    @classmethod
+    def get_types_dict(cls) -> dict:
+        return {
+            SubscriptionType.YOOKASSA: cls.SUBSCRIPTION_PRICE_RUBS,
+            SubscriptionType.TELEGRAM_STARS: cls.SUBSCRIPTION_PRICE_STARS,
+        }
+
+    @classmethod
+    def get_price_by_name(cls, name):
+        return cls.get_types_dict().get(SubscriptionType(name))
 
     def has_active_subscription(self, tg_chat_id: int) -> bool:
         """Есть ли активная подписка у пользователя/чата"""
@@ -67,7 +78,12 @@ class SubscriptionManager:
 ⏰ Осталось дней: {days_left}"""
 
     def activate_subscription(
-        self, user_id: int, chat_id: int, price: int, transaction_id: str = None, type_name: str = None
+        self,
+        user_id: int,
+        chat_id: int,
+        price: int,
+        transaction_id: str = None,
+        type_name: str = None,
     ) -> Tuple[bool, str]:
         """Активировать или продлить подписку"""
         now = datetime.now()
@@ -102,7 +118,7 @@ class SubscriptionManager:
                     amount_stars=price,
                     timestamp=now,
                     who_bought_id=user_id,
-                    type=SubscriptionType.TELEGRAM_STARS if type_name == "telegram_stars" else SubscriptionType.YOOKASSA,
+                    type=SubscriptionType(type_name),
                 )
                 session.add(txn)
 
@@ -159,22 +175,27 @@ class SubscriptionManager:
             )
         return {sub.tg_chat_id: sub for sub in subs}
 
-    def create_subscription_keyboard(self, message: Message) -> InlineKeyboardMarkup:
-        buy_button_stars = InlineKeyboardButton(
-            text=f"⭐ Купить подписку за {SubscriptionManager.SUBSCRIPTION_PRICE_STARS} звёздочку",
-            callback_data=f"buy_subscription:{message.from_user.id}:{message.chat.id}:{SubscriptionManager.SUBSCRIPTION_PRICE_STARS}:TELEGRAM_STARS",
-        )
-        buy_button_rubs = InlineKeyboardButton(
-            text=f"⭐ Купить подписку за {SubscriptionManager.SUBSCRIPTION_PRICE_RUBS} рублей",
-            callback_data=f"buy_subscription:{message.from_user.id}:{message.chat.id}:{SubscriptionManager.SUBSCRIPTION_PRICE_RUBS}:YOOKASSA",
-        )
+    @staticmethod
+    def create_subscription_keyboard(message):
+        buttons = []
+
+        for sub_type, price in SubscriptionManager.get_types_dict().items():
+            if sub_type == SubscriptionType.YOOKASSA:
+                text = f"⭐ Купить подписку за {price} рублей"
+            elif sub_type == SubscriptionType.TELEGRAM_STARS:
+                text = f"⭐ Купить подписку за {price} звёздочку"
+
+            button = InlineKeyboardButton(
+                text=text,
+                callback_data=f"buy_subscription:{message.from_user.id}:{message.chat.id}:{price}:{sub_type.value}",
+            )
+            buttons.append([button])
 
         # Кнопка информации
         info_button = InlineKeyboardButton(
             text="ℹ️ Информация о подписке",
             callback_data=f"subscription_info:{message.chat.id}",
         )
+        buttons.append([info_button])
 
-        return InlineKeyboardMarkup(
-            inline_keyboard=[[buy_button_rubs], [buy_button_stars], [info_button]]
-        )
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
