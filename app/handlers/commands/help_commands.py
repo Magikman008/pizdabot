@@ -45,8 +45,7 @@ async def cmd_help(message: Message):
         "• /sub — купить премиум-подписку за 1 звёздочку\n"
     )
     if user_has_premium:
-        help_text += "• ✅ *Премиум-статус активен!*\
-\n"
+        help_text += "• ✅ *Премиум-статус активен!*\n"
     else:
         help_text += "• ❌ _Премиум-статус неактивен_\n"
     help_text += "\n"
