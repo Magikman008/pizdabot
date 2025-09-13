@@ -4,7 +4,6 @@ from app.handlers import router
 
 
 async def main():
-
     init_db()
 
     dp.include_router(router)
