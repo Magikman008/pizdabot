@@ -15,6 +15,7 @@ from app.models import Subscription, Transaction, SubscriptionType
 class SubscriptionManager:
     # Настройки подписки
     SUBSCRIPTION_PRICE_STARS = 1  # Цена подписки в звёздочках
+    SUBSCRIPTION_PRICE_RUBS = 150  # Цена подписки в рублях
     SUBSCRIPTION_DURATION_DAYS = 30  # Длительность подписки в днях
 
     def __init__(self, session_maker):
@@ -66,7 +67,7 @@ class SubscriptionManager:
 ⏰ Осталось дней: {days_left}"""
 
     def activate_subscription(
-        self, user_id: int, chat_id: int, transaction_id: str = None
+        self, user_id: int, chat_id: int, transaction_id: str = None, type_name: str = None
     ) -> Tuple[bool, str]:
         """Активировать или продлить подписку"""
         now = datetime.now()
@@ -101,7 +102,7 @@ class SubscriptionManager:
                     amount_stars=self.SUBSCRIPTION_PRICE_STARS,
                     timestamp=now,
                     who_bought_id=user_id,
-                    type=SubscriptionType.TELEGRAM_STARS,
+                    type=SubscriptionType.TELEGRAM_STARS if type_name == "telegram_stars" else SubscriptionType.YOOKASSA,
                 )
                 session.add(txn)
 
@@ -111,7 +112,6 @@ class SubscriptionManager:
             True,
             f"""✅ **Подписка активирована!**
 
-⭐ Оплачено: {self.SUBSCRIPTION_PRICE_STARS} звёздочка
 📅 Действует до: {new_expiry.strftime('%d.%m.%Y %H:%M')}
 
 🚀 Теперь вам доступны все премиум-функции бота!""",
@@ -160,9 +160,13 @@ class SubscriptionManager:
         return {sub.tg_chat_id: sub for sub in subs}
 
     def create_subscription_keyboard(self, message: Message) -> InlineKeyboardMarkup:
-        buy_button = InlineKeyboardButton(
+        buy_button_stars = InlineKeyboardButton(
             text=f"⭐ Купить подписку за {SubscriptionManager.SUBSCRIPTION_PRICE_STARS} звёздочку",
-            callback_data=f"buy_subscription:{message.from_user.id}:{message.chat.id}:{SubscriptionManager.SUBSCRIPTION_PRICE_STARS}",
+            callback_data=f"buy_subscription:{message.from_user.id}:{message.chat.id}:{SubscriptionManager.SUBSCRIPTION_PRICE_STARS}:TELEGRAM_STARS",
+        )
+        buy_button_rubs = InlineKeyboardButton(
+            text=f"⭐ Купить подписку за {SubscriptionManager.SUBSCRIPTION_PRICE_RUBS} рублей",
+            callback_data=f"buy_subscription:{message.from_user.id}:{message.chat.id}:{SubscriptionManager.SUBSCRIPTION_PRICE_RUBS}:YOOKASSA",
         )
 
         # Кнопка информации
@@ -172,5 +176,5 @@ class SubscriptionManager:
         )
 
         return InlineKeyboardMarkup(
-            inline_keyboard=[[buy_button], [info_button]]
+            inline_keyboard=[[buy_button_rubs], [buy_button_stars], [info_button]]
         )
