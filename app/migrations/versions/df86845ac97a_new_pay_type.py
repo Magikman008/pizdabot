@@ -1,8 +1,8 @@
-"""test
+"""new pay type
 
-Revision ID: 18819be2095d
-Revises: 3eed81e6d92f
-Create Date: 2025-09-13 13:51:48.420136
+Revision ID: df86845ac97a
+Revises: 9d8bbbcf8846
+Create Date: 2025-09-13 14:19:09.510068
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '18819be2095d'
-down_revision: Union[str, Sequence[str], None] = '3eed81e6d92f'
+revision: str = 'df86845ac97a'
+down_revision: Union[str, Sequence[str], None] = '9d8bbbcf8846'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

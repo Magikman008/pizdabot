@@ -122,11 +122,13 @@ async def successful_payment_handler(message: Message):
         _, user_id_str, chat_id_str, price_str, type_name = payment.invoice_payload.split(":")
         user_id = int(user_id_str)
         chat_id = int(chat_id_str)
+        price = int(price_str)
 
         # Активируем подписку
         success, msg = subscription_manager.activate_subscription(
             user_id=user_id,
             chat_id=chat_id,
+            price=price,
             transaction_id=payment.telegram_payment_charge_id,
             type_name=type_name
         )
@@ -135,15 +137,6 @@ async def successful_payment_handler(message: Message):
             await bot.send_message(
                 chat_id, escape_markdown(msg), parse_mode="MarkdownV2"
             )
-
-            # Уведомляем админов о новой подписке (опционально)
-            admin_msg = f"🎉 Новая подписка!\nПользователь: {message.from_user.full_name} (ID: {user_id})\nОплата: {payment.total_amount} звёздочек"
-            for admin_username in ADMIN_USERNAMES:
-                try:
-                    # Здесь можно отправить уведомление админам
-                    pass
-                except:
-                    pass
         else:
             await message.answer(
                 "❌ Ошибка при активации подписки\\. Обратитесь к администратору\\.",

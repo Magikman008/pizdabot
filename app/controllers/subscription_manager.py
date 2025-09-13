@@ -67,7 +67,7 @@ class SubscriptionManager:
 ⏰ Осталось дней: {days_left}"""
 
     def activate_subscription(
-        self, user_id: int, chat_id: int, transaction_id: str = None, type_name: str = None
+        self, user_id: int, chat_id: int, price: int, transaction_id: str = None, type_name: str = None
     ) -> Tuple[bool, str]:
         """Активировать или продлить подписку"""
         now = datetime.now()
@@ -99,7 +99,7 @@ class SubscriptionManager:
                 txn = Transaction(
                     subscription=sub,
                     transaction_id=transaction_id,
-                    amount_stars=self.SUBSCRIPTION_PRICE_STARS,
+                    amount_stars=price,
                     timestamp=now,
                     who_bought_id=user_id,
                     type=SubscriptionType.TELEGRAM_STARS if type_name == "telegram_stars" else SubscriptionType.YOOKASSA,
