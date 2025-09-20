@@ -1,8 +1,3 @@
-"""
-Обработчик триггеров - ИСПРАВЛЕННАЯ версия
-Добавлена поддержка FSM состояний для системы обратной связи
-"""
-
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
@@ -16,10 +11,6 @@ base_trigger_router = Router()
 
 @base_trigger_router.message(F.text, ~F.text.startswith(("/")))
 async def handle_triggers(message: Message, state: FSMContext):
-    """
-    Обработка триггеров в конце сообщений
-    ИСПРАВЛЕНО: Проверяет FSM состояние перед обработкой
-    """
     if not message.text:
         return
 
