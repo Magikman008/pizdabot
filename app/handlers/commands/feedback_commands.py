@@ -3,14 +3,19 @@
 Обработчики команд для отправки и управления обращениями пользователей
 ОБНОВЛЕНО: принимает любые текстовые сообщения, не только команды
 """
+
 import asyncio
 from datetime import datetime
 
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, \
-    CallbackQuery
+from aiogram.types import (
+    Message,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    CallbackQuery,
+)
 
 from app.controllers import admin_notifier
 from app.controllers import feedback_manager
@@ -23,10 +28,7 @@ feedback_router = Router(name="feedback_system")
 
 
 async def notify_admins_about_new_feedback(
-    feedback_id: int,
-    user_display: str,
-    message_preview: str,
-    full_message: str
+    feedback_id: int, user_display: str, message_preview: str, full_message: str
 ) -> int:
     """
     Legacy: рассылка уведомлений новым feedback.
@@ -70,10 +72,8 @@ async def cmd_feedback_start(message: Message, state: FSMContext):
         "*Напишите ваше сообщение \\(любой текст, не обязательно команду\\):*"
     )
 
-    await message.answer(
-        text=instruction_text,
-        parse_mode="MarkdownV2"
-    )
+    await message.answer(text=instruction_text, parse_mode="MarkdownV2")
+
 
 @feedback_router.message(FeedbackStates.waiting_for_message, F.text)
 async def process_feedback_message(message: Message, state: FSMContext):
@@ -84,14 +84,16 @@ async def process_feedback_message(message: Message, state: FSMContext):
     user_id = message.from_user.id
     message_text = message.text
 
-    print(f"📝 Получено сообщение от {user_id}: '{message_text[:50]}...' ({len(message_text)} символов)")
+    print(
+        f"📝 Получено сообщение от {user_id}: '{message_text[:50]}...' ({len(message_text)} символов)"
+    )
 
     # Проверяем, что это не команда отмены (для удобства пользователей)
-    if message_text.lower() in ['/cancel', '/отмена', 'отмена', 'cancel']:
+    if message_text.lower() in ["/cancel", "/отмена", "отмена", "cancel"]:
         await message.answer(
             "❌ *Отправка обращения отменена*\n\n"
             "Чтобы начать заново, используйте команду /feedback",
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
         await state.clear()
         return
@@ -102,7 +104,7 @@ async def process_feedback_message(message: Message, state: FSMContext):
             "❌ *Сообщение слишком короткое*\n\n"
             "Напишите минимум 5 символов\\.\n"
             "_Или напишите 'отмена' для выхода_",
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
         return
 
@@ -111,7 +113,7 @@ async def process_feedback_message(message: Message, state: FSMContext):
             "❌ *Сообщение слишком длинное*\n\n"
             "Максимум 2000 символов\\.\n"
             f"_Сейчас: {escape_markdown(str(len(message_text)))} символов_",
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
         return
 
@@ -122,7 +124,7 @@ async def process_feedback_message(message: Message, state: FSMContext):
         username=message.from_user.username,
         first_name=message.from_user.first_name,
         last_name=message.from_user.last_name,
-        message_timestamp=datetime.now().isoformat()
+        message_timestamp=datetime.now().isoformat(),
     )
 
     # Формируем отображаемое имя пользователя
@@ -149,21 +151,22 @@ async def process_feedback_message(message: Message, state: FSMContext):
     )
 
     # Создаем inline клавиатуру для подтверждения
-    confirm_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="✅ Да", callback_data="feedback_confirm"),
-            InlineKeyboardButton(text="❌ Нет", callback_data="feedback_cancel")
+    confirm_keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Да", callback_data="feedback_confirm"),
+                InlineKeyboardButton(text="❌ Нет", callback_data="feedback_cancel"),
+            ]
         ]
-    ])
+    )
 
     await message.answer(
-        text=preview_text,
-        parse_mode="MarkdownV2",
-        reply_markup=confirm_keyboard
+        text=preview_text, parse_mode="MarkdownV2", reply_markup=confirm_keyboard
     )
 
     # Переводим в состояние подтверждения
     await state.set_state(FeedbackStates.confirming_send)
+
 
 @feedback_router.message(FeedbackStates.waiting_for_message)
 async def process_non_text_feedback_message(message: Message, state: FSMContext):
@@ -196,8 +199,9 @@ async def process_non_text_feedback_message(message: Message, state: FSMContext)
         f"Пожалуйста, отправьте *обычный текст* для обращения\\.\n"
         f"Изображения и видео прикрепляйте как ссылки в тексте\\.\n\n"
         f"_Или напишите 'отмена' для выхода_",
-        parse_mode="MarkdownV2"
+        parse_mode="MarkdownV2",
     )
+
 
 @feedback_router.callback_query(F.data == "feedback_confirm")
 async def confirm_feedback_submission(callback: CallbackQuery, state: FSMContext):
@@ -215,7 +219,7 @@ async def confirm_feedback_submission(callback: CallbackQuery, state: FSMContext
         username=user_data.get("username"),
         first_name=user_data.get("first_name"),
         last_name=user_data.get("last_name"),
-        message=user_data["feedback_message"]
+        message=user_data["feedback_message"],
     )
 
     if feedback_id:
@@ -228,13 +232,14 @@ async def confirm_feedback_submission(callback: CallbackQuery, state: FSMContext
             f"Администраторы рассмотрят ваше сообщение\\."
         )
 
-        await callback.message.edit_text(
-            text=success_text,
-            parse_mode="MarkdownV2"
-        )
+        await callback.message.edit_text(text=success_text, parse_mode="MarkdownV2")
 
         # Отправляем уведомления администраторам
-        user_display = f"@{user_data.get('username')}" if user_data.get('username') else user_data.get('first_name', f"User {user_data['user_id']}")
+        user_display = (
+            f"@{user_data.get('username')}"
+            if user_data.get("username")
+            else user_data.get("first_name", f"User {user_data['user_id']}")
+        )
         message_preview = user_data["feedback_message"]
         if len(message_preview) > 200:
             message_preview = message_preview[:200] + "..."
@@ -245,11 +250,13 @@ async def confirm_feedback_submission(callback: CallbackQuery, state: FSMContext
                 feedback_id,
                 user_display,
                 message_preview,
-                user_data["feedback_message"]
+                user_data["feedback_message"],
             )
         )
 
-        print(f"🎉 УСПЕХ: Обращение #{feedback_id} от {user_id} сохранено и отправлены уведомления")
+        print(
+            f"🎉 УСПЕХ: Обращение #{feedback_id} от {user_id} сохранено и отправлены уведомления"
+        )
 
     else:
         # Ошибка сохранения
@@ -258,16 +265,14 @@ async def confirm_feedback_submission(callback: CallbackQuery, state: FSMContext
             "Попробуйте позже или обратитесь к администраторам\\."
         )
 
-        await callback.message.edit_text(
-            text=error_text,
-            parse_mode="MarkdownV2"
-        )
+        await callback.message.edit_text(text=error_text, parse_mode="MarkdownV2")
 
         print(f"💥 ОШИБКА: Не удалось сохранить обращение от {user_id}")
 
     # Очищаем состояние FSM
     await state.clear()
     await callback.answer()
+
 
 @feedback_router.callback_query(F.data == "feedback_cancel")
 async def cancel_feedback_submission(callback: CallbackQuery, state: FSMContext):
@@ -282,10 +287,7 @@ async def cancel_feedback_submission(callback: CallbackQuery, state: FSMContext)
         "Чтобы начать заново, используйте команду /feedback"
     )
 
-    await callback.message.edit_text(
-        text=cancel_text,
-        parse_mode="MarkdownV2"
-    )
+    await callback.message.edit_text(text=cancel_text, parse_mode="MarkdownV2")
 
     await state.clear()
     await callback.answer()
@@ -307,9 +309,8 @@ async def cmd_feedback_detail(message: Message):
         args = message.text.split()
         if len(args) < 2:
             await message.answer(
-                "❌ *Укажите ID обращения*\n\n"
-                "_Пример:_ /feedback\\_detail 1",
-                parse_mode="MarkdownV2"
+                "❌ *Укажите ID обращения*\n\n" "_Пример:_ /feedback\\_detail 1",
+                parse_mode="MarkdownV2",
             )
             return
 
@@ -319,8 +320,7 @@ async def cmd_feedback_detail(message: Message):
         if not feedback_data:
             escaped_id = escape_markdown(str(feedback_id))
             await message.answer(
-                f"❌ *Обращение \\#{escaped_id} не найдено*",
-                parse_mode="MarkdownV2"
+                f"❌ *Обращение \\#{escaped_id} не найдено*", parse_mode="MarkdownV2"
             )
             return
 
@@ -328,19 +328,22 @@ async def cmd_feedback_detail(message: Message):
         feedback_manager.mark_as_read(feedback_id)
 
         # Формируем детальную информацию
-        user_display = feedback_data.get('username', feedback_data.get('first_name', f"User {feedback_data['user_id']}"))
-        if feedback_data.get('username'):
+        user_display = feedback_data.get(
+            "username",
+            feedback_data.get("first_name", f"User {feedback_data['user_id']}"),
+        )
+        if feedback_data.get("username"):
             user_display = f"@{user_display}"
 
-        status_text = "Прочитано" if feedback_data['is_read'] else "Новое"
-        created_at = feedback_data['created_at'][:16].replace('T', ' ')
+        status_text = "Прочитано" if feedback_data["is_read"] else "Новое"
+        created_at = feedback_data["created_at"][:16].replace("T", " ")
 
         # Экранируем для MarkdownV2
-        escaped_id = escape_markdown(str(feedback_data['id']))
+        escaped_id = escape_markdown(str(feedback_data["id"]))
         escaped_user = escape_markdown(user_display)
         escaped_date = escape_markdown(created_at)
         escaped_status = escape_markdown(status_text)
-        escaped_message = escape_markdown(feedback_data['message'])
+        escaped_message = escape_markdown(feedback_data["message"])
 
         detail_text = (
             f"📋 *Обращение \\#{escaped_id}*\n\n"
@@ -350,24 +353,21 @@ async def cmd_feedback_detail(message: Message):
             f"📝 *Сообщение:*\n```\n{escaped_message}\n```"
         )
 
-        await message.answer(
-            text=detail_text,
-            parse_mode="MarkdownV2"
-        )
+        await message.answer(text=detail_text, parse_mode="MarkdownV2")
 
         print(f"👁️ Обращение #{feedback_id} просмотрено админом @{username}")
 
     except ValueError:
         await message.answer(
-            "❌ *Неверный формат ID*\n\nУкажите число\\.",
-            parse_mode="MarkdownV2"
+            "❌ *Неверный формат ID*\n\nУкажите число\\.", parse_mode="MarkdownV2"
         )
     except Exception as e:
         escaped_error = escape_markdown(str(e))
         await message.answer(
             f"❌ *Ошибка при получении обращения:*\n{escaped_error}",
-            parse_mode="MarkdownV2"
+            parse_mode="MarkdownV2",
         )
+
 
 @feedback_router.message(Command("feedback_stats"))
 @admin_only
@@ -384,10 +384,10 @@ async def cmd_feedback_stats(message: Message):
     stats = feedback_manager.get_stats()
 
     # Экранируем числовые значения
-    escaped_total = escape_markdown(str(stats['total_count']))
-    escaped_unread = escape_markdown(str(stats['unread_count']))
-    escaped_read = escape_markdown(str(stats['read_count']))
-    escaped_users = escape_markdown(str(stats['unique_users']))
+    escaped_total = escape_markdown(str(stats["total_count"]))
+    escaped_unread = escape_markdown(str(stats["unread_count"]))
+    escaped_read = escape_markdown(str(stats["read_count"]))
+    escaped_users = escape_markdown(str(stats["unique_users"]))
 
     stats_text = (
         f"📊 *Статистика обращений*\n\n"
@@ -397,14 +397,11 @@ async def cmd_feedback_stats(message: Message):
         f"👥 *Уникальных пользователей:* {escaped_users}\n"
     )
 
-    if stats['last_feedback_date']:
-        last_date = stats['last_feedback_date'][:16].replace('T', ' ')
+    if stats["last_feedback_date"]:
+        last_date = stats["last_feedback_date"][:16].replace("T", " ")
         escaped_date = escape_markdown(last_date)
         stats_text += f"🕐 *Последнее обращение:* {escaped_date}"
     else:
         stats_text += "🕐 *Обращений пока нет*"
 
-    await message.answer(
-        text=stats_text,
-        parse_mode="MarkdownV2"
-    )
+    await message.answer(text=stats_text, parse_mode="MarkdownV2")

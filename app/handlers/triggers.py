@@ -2,6 +2,7 @@
 Обработчик триггеров - ИСПРАВЛЕННАЯ версия
 Добавлена поддержка FSM состояний для системы обратной связи
 """
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
@@ -26,10 +27,11 @@ async def handle_triggers(message: Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state in [
         FeedbackStates.waiting_for_message.state,
-        FeedbackStates.confirming_send.state
+        FeedbackStates.confirming_send.state,
     ]:
         print(
-            f"⏭️ Пропускаем триггеры для пользователя {message.from_user.id} - в процессе feedback")
+            f"⏭️ Пропускаем триггеры для пользователя {message.from_user.id} - в процессе feedback"
+        )
         return  # НЕ обрабатываем триггеры во время процесса обратной связи
 
     # ПРОВЕРЯЕМ НАСТРОЙКИ ЧАТА - должен ли бот отвечать

@@ -2,6 +2,7 @@
 Модель для системы обратной связи - полностью переписанная
 Хранение обращений пользователей в базе данных
 """
+
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Index
@@ -14,7 +15,8 @@ class Feedback(Base):
     Модель для хранения обращений пользователей
     Совместима с существующей архитектурой проекта
     """
-    __tablename__ = 'feedback'
+
+    __tablename__ = "feedback"
 
     # Основные поля
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -28,14 +30,15 @@ class Feedback(Base):
 
     # Метаданные
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    is_read = Column(Boolean, default=False, nullable=False, index=True, comment="Прочитано админом")
+    is_read = Column(
+        Boolean, default=False, nullable=False, index=True, comment="Прочитано админом"
+    )
 
     # Составные индексы для оптимизации запросов
     __table_args__ = (
-        Index('idx_feedback_user_created', 'user_id', 'created_at'),
-        Index('idx_feedback_unread_created', 'is_read', 'created_at'),
+        Index("idx_feedback_user_created", "user_id", "created_at"),
+        Index("idx_feedback_unread_created", "is_read", "created_at"),
     )
-
 
     def mark_as_read(self) -> None:
         """

@@ -2,6 +2,7 @@
 Полное обновленное руководство /help для бота PizdaBot
 Включает ВСЕ команды из всех модулей системы
 """
+
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -10,6 +11,7 @@ from app.utils.tools import is_admin, has_premium_access, escape_markdown
 
 # Создаем роутер для команд помощи
 help_router = Router()
+
 
 @help_router.message(Command("help"))
 async def cmd_help(message: Message):
@@ -21,9 +23,7 @@ async def cmd_help(message: Message):
     user_has_premium = has_premium_access(user_id)
 
     # Заголовок
-    help_text = (
-        "🤖 *Команды бота Подъёбыш*\n\n"
-    )
+    help_text = "🤖 *Команды бота Подъёбыш*\n\n"
 
     # === СИСТЕМА ОБРАТНОЙ СВЯЗИ ===
     help_text += (
@@ -42,8 +42,7 @@ async def cmd_help(message: Message):
 
     # === ПРЕМИУМ И ПОДПИСКИ ===
     help_text += (
-        "⭐ *Подписка и премиум:*\n"
-        "• /sub — купить премиум-подписку за 1 звёздочку\n"
+        "⭐ *Подписка и премиум:*\n" "• /sub — купить премиум-подписку за 1 звёздочку\n"
     )
     if user_has_premium:
         help_text += "• ✅ *Премиум-статус активен!*\n"
@@ -52,9 +51,7 @@ async def cmd_help(message: Message):
     help_text += "\n"
 
     # === ПОЛЬЗОВАТЕЛЬСКИЕ ТРИГГЕРЫ ===
-    help_text += (
-        "🎯 *Пользовательские триггеры* "
-    )
+    help_text += "🎯 *Пользовательские триггеры* "
     if user_has_premium:
         help_text += "(доступно):\n"
         help_text += (
@@ -96,17 +93,17 @@ async def cmd_help(message: Message):
             "У вас активен премиум-доступ ко всем функциям."
         )
 
-    await message.answer(
-        text=escape_markdown(help_text),
-        parse_mode="MarkdownV2"
-    )
+    await message.answer(text=escape_markdown(help_text), parse_mode="MarkdownV2")
+
 
 @help_router.message(Command("start"))
 async def cmd_start(message: Message):
     """
     Команда /start - расширенное приветствие пользователя
     """
-    username = message.from_user.username or message.from_user.first_name or "пользователь"
+    username = (
+        message.from_user.username or message.from_user.first_name or "пользователь"
+    )
     user_id = message.from_user.id
     user_is_admin = is_admin(message.from_user.username)
     user_has_premium = has_premium_access(user_id)
@@ -162,10 +159,8 @@ async def cmd_start(message: Message):
         "🎭 *Попробуйте написать что-нибудь и посмотрите, что получится!* 😄"
     )
 
-    await message.answer(
-        text=escape_markdown(start_text),
-        parse_mode="MarkdownV2"
-    )
+    await message.answer(text=escape_markdown(start_text), parse_mode="MarkdownV2")
+
 
 @help_router.message(Command("commands"))
 async def cmd_commands(message: Message):

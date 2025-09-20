@@ -56,14 +56,14 @@ class AdminNotifier:
         admins = self.get_admin_chats()
         tasks = []
         for admin in admins:
-            tasks.append(bot.send_message(
-                chat_id=admin.chat_id,
-                text=escape_markdown(text),
-                parse_mode="MarkdownV2"
-            ))
+            tasks.append(
+                bot.send_message(
+                    chat_id=admin.chat_id,
+                    text=escape_markdown(text),
+                    parse_mode="MarkdownV2",
+                )
+            )
         results = await asyncio.gather(*tasks, return_exceptions=True)
         success = sum(1 for r in results if not isinstance(r, Exception))
         print(f"📊 Рассылка уведомлений завершена: {success}/{len(admins)}")
         return success
-
-

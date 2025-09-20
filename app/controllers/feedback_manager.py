@@ -2,6 +2,7 @@
 Менеджер системы обратной связи - полностью переписанная реализация
 Управление обращениями пользователей с использованием существующей архитектуры проекта
 """
+
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
@@ -43,7 +44,7 @@ class FeedbackManager:
         username: Optional[str] = None,
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
-        message: str = ""
+        message: str = "",
     ) -> Optional[int]:
         """
         Добавить новое обращение пользователя
@@ -69,7 +70,7 @@ class FeedbackManager:
                     username=username,
                     first_name=first_name,
                     last_name=last_name,
-                    message=message.strip()
+                    message=message.strip(),
                 )
 
                 session.add(feedback)
@@ -84,10 +85,7 @@ class FeedbackManager:
             return None
 
     def get_all_feedback(
-        self,
-        limit: int = 50,
-        unread_only: bool = False,
-        user_id: Optional[int] = None
+        self, limit: int = 50, unread_only: bool = False, user_id: Optional[int] = None
     ):
         """
         Получить список обращений
@@ -133,9 +131,9 @@ class FeedbackManager:
         """
         try:
             with self.get_session() as session:
-                feedback = session.query(Feedback).filter(
-                    Feedback.id == feedback_id
-                ).first()
+                feedback = (
+                    session.query(Feedback).filter(Feedback.id == feedback_id).first()
+                )
 
                 if feedback:
                     print(f"📋 Получено обращение #{feedback_id}")
@@ -160,9 +158,9 @@ class FeedbackManager:
         """
         try:
             with self.get_session() as session:
-                feedback = session.query(Feedback).filter(
-                    Feedback.id == feedback_id
-                ).first()
+                feedback = (
+                    session.query(Feedback).filter(Feedback.id == feedback_id).first()
+                )
 
                 if feedback and not feedback.is_read:
                     feedback.mark_as_read()
@@ -184,11 +182,10 @@ class FeedbackManager:
         """
         try:
             with self.get_session() as session:
-                updated_count = session.query(Feedback).filter(
-                    Feedback.is_read == False
-                ).update(
-                    {'is_read': True},
-                    synchronize_session=False
+                updated_count = (
+                    session.query(Feedback)
+                    .filter(Feedback.is_read == False)
+                    .update({"is_read": True}, synchronize_session=False)
                 )
 
                 print(f"👁️ Отмечено как прочитанные: {updated_count} обращений")
@@ -207,9 +204,9 @@ class FeedbackManager:
         """
         try:
             with self.get_session() as session:
-                count = session.query(Feedback).filter(
-                    Feedback.is_read == False
-                ).count()
+                count = (
+                    session.query(Feedback).filter(Feedback.is_read == False).count()
+                )
 
                 return count
 
@@ -217,7 +214,9 @@ class FeedbackManager:
             print(f"❌ Ошибка подсчета непрочитанных: {e}")
             return 0
 
-    def get_feedback_by_user(self, user_id: int, limit: int = 20) -> List[Dict[str, Any]]:
+    def get_feedback_by_user(
+        self, user_id: int, limit: int = 20
+    ) -> List[Dict[str, Any]]:
         """
         Получить все обращения конкретного пользователя
 
@@ -242,9 +241,9 @@ class FeedbackManager:
         """
         try:
             with self.get_session() as session:
-                feedback = session.query(Feedback).filter(
-                    Feedback.id == feedback_id
-                ).first()
+                feedback = (
+                    session.query(Feedback).filter(Feedback.id == feedback_id).first()
+                )
 
                 if feedback:
                     session.delete(feedback)
@@ -269,45 +268,53 @@ class FeedbackManager:
             with self.get_session() as session:
                 # Основные счетчики
                 total_count = session.query(Feedback).count()
-                unread_count = session.query(Feedback).filter(
-                    Feedback.is_read == False
-                ).count()
+                unread_count = (
+                    session.query(Feedback).filter(Feedback.is_read == False).count()
+                )
 
                 # Уникальные пользователи
-                unique_users = session.query(func.count(func.distinct(Feedback.user_id))).scalar()
+                unique_users = session.query(
+                    func.count(func.distinct(Feedback.user_id))
+                ).scalar()
 
                 # Последнее обращение
-                last_feedback = session.query(Feedback).order_by(
-                    desc(Feedback.created_at)
-                ).first()
+                last_feedback = (
+                    session.query(Feedback).order_by(desc(Feedback.created_at)).first()
+                )
 
                 # Статистика за последние 24 часа
                 day_ago = datetime.utcnow() - timedelta(days=1)
-                recent_count = session.query(Feedback).filter(
-                    Feedback.created_at >= day_ago
-                ).count()
+                recent_count = (
+                    session.query(Feedback)
+                    .filter(Feedback.created_at >= day_ago)
+                    .count()
+                )
 
                 stats = {
-                    'total_count': total_count,
-                    'unread_count': unread_count,
-                    'read_count': total_count - unread_count,
-                    'unique_users': unique_users,
-                    'last_feedback_date': last_feedback.created_at.isoformat() if last_feedback else None,
-                    'recent_24h': recent_count
+                    "total_count": total_count,
+                    "unread_count": unread_count,
+                    "read_count": total_count - unread_count,
+                    "unique_users": unique_users,
+                    "last_feedback_date": (
+                        last_feedback.created_at.isoformat() if last_feedback else None
+                    ),
+                    "recent_24h": recent_count,
                 }
 
-                print(f"📊 Статистика: всего {total_count}, непрочитанных {unread_count}")
+                print(
+                    f"📊 Статистика: всего {total_count}, непрочитанных {unread_count}"
+                )
                 return stats
 
         except Exception as e:
             print(f"❌ Ошибка получения статистики: {e}")
             return {
-                'total_count': 0,
-                'unread_count': 0,
-                'read_count': 0,
-                'unique_users': 0,
-                'last_feedback_date': None,
-                'recent_24h': 0
+                "total_count": 0,
+                "unread_count": 0,
+                "read_count": 0,
+                "unique_users": 0,
+                "last_feedback_date": None,
+                "recent_24h": 0,
             }
 
     def cleanup_old_feedback(self, days_old: int = 90) -> int:
@@ -324,12 +331,18 @@ class FeedbackManager:
             cutoff_date = datetime.utcnow() - timedelta(days=days_old)
 
             with self.get_session() as session:
-                deleted_count = session.query(Feedback).filter(
-                    Feedback.created_at < cutoff_date,
-                    Feedback.is_read == True  # Удаляем только прочитанные
-                ).delete(synchronize_session=False)
+                deleted_count = (
+                    session.query(Feedback)
+                    .filter(
+                        Feedback.created_at < cutoff_date,
+                        Feedback.is_read == True,  # Удаляем только прочитанные
+                    )
+                    .delete(synchronize_session=False)
+                )
 
-                print(f"🧹 Очищено {deleted_count} старых обращений (старше {days_old} дней)")
+                print(
+                    f"🧹 Очищено {deleted_count} старых обращений (старше {days_old} дней)"
+                )
                 return deleted_count
 
         except Exception as e:

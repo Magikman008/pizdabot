@@ -18,7 +18,7 @@ __all__ = [
     "admin_notifier",
     "feedback_manager",
     "AdminNotifier",
-    "FeedbackManager"
+    "FeedbackManager",
 ]
 
 # Создаем глобальный экземпляр менеджера настроек

@@ -86,10 +86,7 @@ async def cmd_feedback_unread(message: Message):
     feedbacks = feedback_manager.get_all_feedback(limit=10, unread_only=True)
 
     if not feedbacks:
-        text = (
-            "✅ **Нет непрочитанных обращений**\n\n"
-            "Все обращения обработаны!"
-        )
+        text = "✅ **Нет непрочитанных обращений**\n\n" "Все обращения обработаны!"
         await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
         return
 
@@ -97,14 +94,14 @@ async def cmd_feedback_unread(message: Message):
 
     for fb in feedbacks:
         user_display = fb.username or fb.first_name or f"User {fb.user_id}"
-        if fb.get('username'):
+        if fb.get("username"):
             user_display = f"@{user_display}"
 
-        message_preview = fb['message']
+        message_preview = fb["message"]
         if len(message_preview) > 150:
             message_preview = message_preview[:150] + "..."
 
-        created_at = fb['created_at'][:16].replace('T', ' ')
+        created_at = fb["created_at"][:16].replace("T", " ")
 
         text += (
             f"🆔 **#{fb['id']}** | {user_display}\n"
@@ -166,8 +163,8 @@ async def cmd_feedback_user(message: Message):
             return
 
         first = feedbacks[0]
-        user_display = first.get('username', first.get('first_name', f"User {user_id}"))
-        if first.get('username'):
+        user_display = first.get("username", first.get("first_name", f"User {user_id}"))
+        if first.get("username"):
             user_display = f"@{user_display}"
 
         text = (
@@ -176,14 +173,13 @@ async def cmd_feedback_user(message: Message):
         )
 
         for fb in feedbacks:
-            status = "🔴" if not fb['is_read'] else "✅"
-            message_preview = fb['message']
+            status = "🔴" if not fb["is_read"] else "✅"
+            message_preview = fb["message"]
             if len(message_preview) > 100:
                 message_preview = message_preview[:100] + "..."
-            created_at = fb['created_at'][:16].replace('T', ' ')
+            created_at = fb["created_at"][:16].replace("T", " ")
             text += (
-                f"{status} **#{fb['id']}** | {created_at}\n"
-                f"💬 {message_preview}\n\n"
+                f"{status} **#{fb['id']}** | {created_at}\n" f"💬 {message_preview}\n\n"
             )
 
         await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
@@ -238,7 +234,7 @@ async def cmd_admin_feedback(message: Message):
         message_preview = fb.message
         if len(message_preview) > 100:
             message_preview = message_preview[:100] + "..."
-        created_at = fb.created_at.isoformat()[:16].replace('T', ' ')
+        created_at = fb.created_at.isoformat()[:16].replace("T", " ")
         text += (
             f"{status} *#{escape_markdown(str(fb.id))}* | {user_display}\n"
             f"📅 {created_at}\n"
