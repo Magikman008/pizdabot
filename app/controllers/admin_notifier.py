@@ -15,7 +15,7 @@ class AdminNotifier:
         """
         Сохраняет или обновляет запись администратора для получения уведомлений.
         """
-        session = self.Session()
+        session = self.session_maker()
         try:
             # Проверяем наличие записи
             record: Optional[AdminChat] = (
@@ -43,7 +43,7 @@ class AdminNotifier:
         """
         Возвращает все записи администраторов для рассылки уведомлений.
         """
-        session = self.Session()
+        session = self.session_maker()
         try:
             return session.query(AdminChat).all()
         finally:

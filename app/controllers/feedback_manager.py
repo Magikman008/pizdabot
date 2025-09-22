@@ -20,23 +20,6 @@ class FeedbackManager:
 
     def __init__(self, session_maker):
         self.session_maker = session_maker
-        print("📝 FeedbackManager: Подключен к существующей БД")
-
-    @contextmanager
-    def get_session(self):
-        """
-        Контекстный менеджер для работы с сессией БД
-        """
-        session = self.Session()
-        try:
-            yield session
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            print(f"❌ Ошибка БД: {e}")
-            raise
-        finally:
-            session.close()
 
     def add_feedback(
         self,
@@ -46,25 +29,13 @@ class FeedbackManager:
         last_name: Optional[str] = None,
         message: str = "",
     ) -> Optional[int]:
-        """
-        Добавить новое обращение пользователя
 
-        Args:
-            user_id: Telegram ID пользователя
-            username: Username без @
-            first_name: Имя пользователя
-            last_name: Фамилия пользователя
-            message: Текст обращения
-
-        Returns:
-            Optional[int]: ID созданного обращения или None при ошибке
-        """
         if not message or not message.strip():
             print("❌ Пустое сообщение обращения")
             return None
 
         try:
-            with self.get_session() as session:
+            with self.session_maker() as session:
                 feedback = Feedback(
                     user_id=user_id,
                     username=username,
@@ -98,7 +69,7 @@ class FeedbackManager:
             List[Feedback]: Список обращений
         """
         try:
-            with self.get_session() as session:
+            with self.session_maker() as session:
                 query = session.query(Feedback)
 
                 # Применяем фильтры
@@ -130,7 +101,7 @@ class FeedbackManager:
             Optional[Dict]: Данные обращения или None
         """
         try:
-            with self.get_session() as session:
+            with self.session_maker() as session:
                 feedback = (
                     session.query(Feedback).filter(Feedback.id == feedback_id).first()
                 )
@@ -157,7 +128,7 @@ class FeedbackManager:
             bool: True если успешно обновлено
         """
         try:
-            with self.get_session() as session:
+            with self.session_maker() as session:
                 feedback = (
                     session.query(Feedback).filter(Feedback.id == feedback_id).first()
                 )
@@ -181,7 +152,7 @@ class FeedbackManager:
             int: Количество обновленных записей
         """
         try:
-            with self.get_session() as session:
+            with self.session_maker() as session:
                 updated_count = (
                     session.query(Feedback)
                     .filter(Feedback.is_read == False)
@@ -203,7 +174,7 @@ class FeedbackManager:
             int: Количество непрочитанных обращений
         """
         try:
-            with self.get_session() as session:
+            with self.session_maker() as session:
                 count = (
                     session.query(Feedback).filter(Feedback.is_read == False).count()
                 )
@@ -240,7 +211,7 @@ class FeedbackManager:
             bool: True если успешно удалено
         """
         try:
-            with self.get_session() as session:
+            with self.session_maker() as session:
                 feedback = (
                     session.query(Feedback).filter(Feedback.id == feedback_id).first()
                 )
@@ -265,7 +236,7 @@ class FeedbackManager:
             Dict: Словарь со статистикой
         """
         try:
-            with self.get_session() as session:
+            with self.session_maker() as session:
                 # Основные счетчики
                 total_count = session.query(Feedback).count()
                 unread_count = (
@@ -330,7 +301,7 @@ class FeedbackManager:
         try:
             cutoff_date = datetime.utcnow() - timedelta(days=days_old)
 
-            with self.get_session() as session:
+            with self.session_maker() as session:
                 deleted_count = (
                     session.query(Feedback)
                     .filter(

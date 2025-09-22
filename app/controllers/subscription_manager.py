@@ -7,8 +7,6 @@ from datetime import datetime, timedelta
 from typing import Dict, Tuple
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from sqlalchemy.orm import Session
-
 from app.models import Subscription, Transaction, SubscriptionType
 
 
@@ -24,15 +22,15 @@ class SubscriptionManager:
     def has_active_subscription(self, tg_chat_id: int) -> bool:
         """Есть ли активная подписка у пользователя/чата"""
         with self.session_maker() as session:
-            sub = (
+            chat_sub = (
                 session.query(Subscription)
                 .filter_by(tg_chat_id=tg_chat_id)
                 .order_by(Subscription.expires_at.desc())
                 .first()
             )
-        if not sub:
+        if not chat_sub:
             return False
-        return sub.expires_at > datetime.now()
+        return chat_sub.expires_at > datetime.now()
 
     def get_subscription_info(self, tg_chat_id: int = None) -> str:
         """Текстовая информация о подписке"""

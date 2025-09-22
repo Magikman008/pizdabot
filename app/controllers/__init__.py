@@ -35,5 +35,4 @@ user_trigger_manager = UserTriggerManager(SessionLocal)
 
 admin_notifier = AdminNotifier(SessionLocal)
 
-# Глобальный экземпляр менеджера (совместимость с существующим кодом)
 feedback_manager = FeedbackManager(SessionLocal)

@@ -40,7 +40,7 @@ async def notify_admins_about_new_feedback(
         f"👤 *От:* {user_display}\n"
         f"📅 *Время:* {str(datetime.now().strftime('%d.%m.%y %H:%M'))}\n\n"
         f"💬 *Сообщение:*\n{message_preview}\n\n"
-        f"_Используйте `/feedback_detail {feedback_id}` для просмотра полного текста_"
+        f"_Для просмотра полного текста обращения используйте `/feedback_detail {feedback_id}`_"
     )
 
     # Асинхронная рассылка всем зарегистрированным админам
