@@ -91,24 +91,14 @@ class FeedbackManager:
             return []
 
     def get_feedback_by_id(self, feedback_id: int) -> Optional[Dict[str, Any]]:
-        """
-        Получить обращение по ID
-
-        Args:
-            feedback_id: ID обращения
-
-        Returns:
-            Optional[Dict]: Данные обращения или None
-        """
         try:
             with self.session_maker() as session:
-                feedback = (
-                    session.query(Feedback).filter(Feedback.id == feedback_id).first()
-                )
+                feedback = session.query(Feedback).filter(
+                    Feedback.id == feedback_id).first()
 
                 if feedback:
                     print(f"📋 Получено обращение #{feedback_id}")
-                    return feedback
+                    return feedback.to_dict()
 
                 print(f"❌ Обращение #{feedback_id} не найдено")
                 return None

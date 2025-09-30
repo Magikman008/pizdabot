@@ -335,16 +335,18 @@ async def cmd_feedback_detail(message: Message):
         status_text = "Прочитано" if feedback_data["is_read"] else "Новое"
         created_at = feedback_data["created_at"][:16].replace("T", " ")
 
+
         # Экранируем для MarkdownV2
         escaped_id = escape_markdown(str(feedback_data["id"]))
         escaped_user = escape_markdown(user_display)
         escaped_status = escape_markdown(status_text)
-        escaped_message = escape_markdown(feedback_data["message"])
+        escaped_date = escape_markdown(created_at)
+        escaped_message = escape_markdown(str(feedback_data["message"]))
 
         detail_text = (
             f"📋 *Обращение \\#{escaped_id}*\n\n"
             f"👤 *От:* {escaped_user}\n"
-            f"📅 *Дата:* {created_at}\n"
+            f"📅 *Дата:* {escaped_date}\n"
             f"👁️ *Статус:* {escaped_status}\n\n"
             f"📝 *Сообщение:*\n```\n{escaped_message}\n```"
         )
