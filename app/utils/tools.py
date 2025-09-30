@@ -1,8 +1,5 @@
 from aiogram.types import Message
 
-import app
-from app.controllers import SubscriptionManager
-from app.db import SessionLocal
 from settings import ADMIN_USERNAMES
 
 
@@ -12,7 +9,7 @@ def escape_markdown(text: str) -> str:
     которые Telegram считает специальными в MarkdownV2.
     """
     # Список всех спецсимволов MarkdownV2
-    special_chars = r"+#\[]()~<>-=|{}!"
+    special_chars = r"+#\[]().~<>-=|{}!"
     # Экранируем каждый спецсимвол обратным слешем
     return "".join(f"\\{ch}" if ch in special_chars else ch for ch in text)
 
@@ -24,5 +21,5 @@ def is_admin(message: Message) -> bool:
 
 def has_premium_access(user_id: int) -> bool:
     """Проверка наличия премиум-доступа у пользователя"""
-    subscription_manager = app.controllers.SubscriptionManager(SessionLocal)
+    from app.controllers import subscription_manager
     return subscription_manager.has_active_subscription(user_id)

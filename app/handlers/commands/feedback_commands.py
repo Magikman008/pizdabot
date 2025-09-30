@@ -44,7 +44,7 @@ async def notify_admins_about_new_feedback(
     )
 
     # Асинхронная рассылка всем зарегистрированным админам
-    success_count = await admin_notifier.notify_all(escape_markdown(notification_text))
+    success_count = await admin_notifier.notify_all(notification_text)
 
     print(f"📊 Отправлено уведомлений: {success_count}")
     return success_count
@@ -301,9 +301,6 @@ async def cmd_feedback_detail(message: Message):
     """
     username = message.from_user.username
 
-    # Автоматически регистрируем админа
-    await admin_notifier.register_admin(username, message.chat.id)
-
     try:
         # Извлекаем ID из команды
         args = message.text.split()
@@ -341,14 +338,13 @@ async def cmd_feedback_detail(message: Message):
         # Экранируем для MarkdownV2
         escaped_id = escape_markdown(str(feedback_data["id"]))
         escaped_user = escape_markdown(user_display)
-        escaped_date = escape_markdown(created_at)
         escaped_status = escape_markdown(status_text)
         escaped_message = escape_markdown(feedback_data["message"])
 
         detail_text = (
             f"📋 *Обращение \\#{escaped_id}*\n\n"
             f"👤 *От:* {escaped_user}\n"
-            f"📅 *Дата:* {escaped_date}\n"
+            f"📅 *Дата:* {created_at}\n"
             f"👁️ *Статус:* {escaped_status}\n\n"
             f"📝 *Сообщение:*\n```\n{escaped_message}\n```"
         )
@@ -376,9 +372,6 @@ async def cmd_feedback_stats(message: Message):
     Статистика по обращениям
     """
     username = message.from_user.username
-
-    # Автоматически регистрируем админа
-    await admin_notifier.register_admin(username, message.chat.id)
 
     # Получаем статистику
     stats = feedback_manager.get_stats()

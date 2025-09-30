@@ -45,7 +45,7 @@ class FeedbackManager:
                 )
 
                 session.add(feedback)
-                session.flush()  # Получаем ID без коммита
+                session.commit()  # Получаем ID
                 feedback_id = feedback.id
 
                 print(f"✅ Создано обращение #{feedback_id} от пользователя {user_id}")
