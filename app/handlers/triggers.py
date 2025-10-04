@@ -1,8 +1,10 @@
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 import re
 
 from app.controllers import user_trigger_manager, chat_settings_manager, bot_stats
+from app.states import FeedbackStates
 from triggers import russian_swear_triggers
 
 base_trigger_router = Router()
@@ -13,7 +15,7 @@ def is_caps_message(text):
         return False
 
     # Убираем пунктуацию и пробелы для анализа
-    clean_text = re.sub(r'[^\w\u0400-\u04FF]', '', text, flags=re.UNICODE)
+    clean_text = re.sub(r"[^\w\u0400-\u04FF]", "", text, flags=re.UNICODE)
 
     # Если после очистки нет букв, возвращаем False
     if not clean_text:
@@ -24,13 +26,20 @@ def is_caps_message(text):
 
 
 @base_trigger_router.message(F.text, ~F.text.startswith(("/")))
-async def handle_triggers(message: Message):
-    """
-    Обработка триггеров в конце сообщений
-    Сначала проверяет настройки чата, потом пользовательские триггеры, потом глобальные
-    """
+async def handle_triggers(message: Message, state: FSMContext):
     if not message.text:
         return
+
+    # КРИТИЧЕСКИ ВАЖНО: Проверяем, не находится ли пользователь в процессе обратной связи
+    current_state = await state.get_state()
+    if current_state in [
+        FeedbackStates.waiting_for_message.state,
+        FeedbackStates.confirming_send.state,
+    ]:
+        print(
+            f"⏭️ Пропускаем триггеры для пользователя {message.from_user.id} - в процессе feedback"
+        )
+        return  # НЕ обрабатываем триггеры во время процесса обратной связи
 
     # ПРОВЕРЯЕМ НАСТРОЙКИ ЧАТА - должен ли бот отвечать
     if not chat_settings_manager.should_respond(message.chat.id):
@@ -67,8 +76,8 @@ async def handle_triggers(message: Message):
             # Дополнительная проверка: триггер должен быть отдельным словом/фразой
             # (не частью другого слова)
             if (
-                    len(text) == len(trigger_lower)
-                    or text[-(len(trigger_lower) + 1)] in " .,!?;:"
+                len(text) == len(trigger_lower)
+                or text[-(len(trigger_lower) + 1)] in " .,!?;:"
             ):
                 # НОВОЕ: если исходное сообщение КАПСЛОКОМ, отвечаем КАПСЛОКОМ
                 final_response = response.upper() if is_caps else response
