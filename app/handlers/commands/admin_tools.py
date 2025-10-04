@@ -83,7 +83,7 @@ async def cmd_mark_all_read(message: Message):
 @admin_router.message(Command("feedback_unread"))
 @admin_only
 async def cmd_feedback_unread(message: Message):
-    feedbacks = feedback_manager.get_all_feedback(limit=10, unread_only=True)
+    feedbacks = feedback_manager.get_all_feedback(limit=100, unread_only=True)
 
     if not feedbacks:
         text = "✅ **Нет непрочитанных обращений**\n\n" "Все обращения обработаны!"
@@ -156,7 +156,7 @@ async def cmd_feedback_user(message: Message):
             return
 
         user_id = int(args[1])
-        feedbacks = feedback_manager.get_feedback_by_user(user_id, limit=10)
+        feedbacks = feedback_manager.get_feedback_by_user(user_id, limit=100)
         if not feedbacks:
             text = f"📭 **Обращений от пользователя {user_id} не найдено**"
             await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
@@ -198,16 +198,13 @@ async def cmd_admin_feedback(message: Message):
     """
     Просмотр всех обращений (только для администраторов)
     """
-    username = message.from_user.username
-
     if not is_admin(message):
         text = "❌ *Эта команда доступна только администраторам*"
         await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
         return
 
-    await admin_notifier.register_admin(username, message.chat.id)
 
-    feedbacks = feedback_manager.get_all_feedback(limit=10)
+    feedbacks = feedback_manager.get_all_feedback(limit=100)
     unread_count = feedback_manager.get_unread_count()
 
     if not feedbacks:
@@ -238,7 +235,8 @@ async def cmd_admin_feedback(message: Message):
         text += (
             f"{status} *#{escape_markdown(str(fb.id))}* | {user_display}\n"
             f"📅 {created_at}\n"
-            f"💬 {escape_markdown(message_preview)}\n\n"
+            f"💬 {escape_markdown(message_preview)}\n"
+            f"👀 `/feedback_detail {str(fb.id)}` \n\n"
         )
 
     text += "Используйте /feedback_detail [ID] для просмотра полного текста"
