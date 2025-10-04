@@ -386,9 +386,9 @@ async def cmd_feedback_detail(message: Message):
             return
 
         feedback_id = int(args[1])
-        feedback_data = feedback_manager.get_feedback_by_id(feedback_id)
+        feedback = feedback_manager.get_feedback_by_id(feedback_id)
 
-        if not feedback_data:
+        if not feedback:
             escaped_id = escape_markdown(str(feedback_id))
             await message.answer(
                 f"❌ *Обращение \\#{escaped_id} не найдено*", parse_mode="MarkdownV2"
@@ -399,22 +399,20 @@ async def cmd_feedback_detail(message: Message):
         feedback_manager.mark_as_read(feedback_id)
 
         # Формируем детальную информацию
-        user_display = feedback_data.get(
-            "username",
-            feedback_data.get("first_name", f"User {feedback_data['user_id']}"),
-        )
-        if feedback_data.get("username"):
+        user_display = feedback.username or feedback.first_name or feedback.user_id
+
+        if feedback.username:
             user_display = f"@{user_display}"
 
-        status_text = "Прочитано" if feedback_data["is_read"] else "Новое"
-        created_at = feedback_data["created_at"][:16].replace("T", " ")
+        status_text = "Прочитано" if feedback.is_read else "Новое"
+        created_at = feedback.created_at.isoformat()[:16].replace("T", " ")
 
         # Экранируем для MarkdownV2
-        escaped_id = escape_markdown(str(feedback_data["id"]))
+        escaped_id = escape_markdown(str(feedback.id))
         escaped_user = escape_markdown(user_display)
         escaped_status = escape_markdown(status_text)
         escaped_date = escape_markdown(created_at)
-        escaped_message = escape_markdown(str(feedback_data["message"]))
+        escaped_message = escape_markdown(str(feedback.message))
 
         detail_text = (
             f"📋 *Обращение \\#{escaped_id}*\n\n"

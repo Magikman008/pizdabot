@@ -124,8 +124,8 @@ async def cmd_feedback_delete(message: Message):
             return
 
         feedback_id = int(args[1])
-        feedback_data = feedback_manager.get_feedback_by_id(feedback_id)
-        if not feedback_data:
+        feedback = feedback_manager.get_feedback_by_id(feedback_id)
+        if not feedback:
             text = f"❌ Обращение #{feedback_id} не найдено."
             await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
             return

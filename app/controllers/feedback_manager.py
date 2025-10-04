@@ -90,7 +90,7 @@ class FeedbackManager:
             print(f"❌ Ошибка получения обращений: {e}")
             return []
 
-    def get_feedback_by_id(self, feedback_id: int) -> Optional[Dict[str, Any]]:
+    def get_feedback_by_id(self, feedback_id: int) -> Optional[Feedback]:
         try:
             with self.session_maker() as session:
                 feedback = (
@@ -99,7 +99,7 @@ class FeedbackManager:
 
                 if feedback:
                     print(f"📋 Получено обращение #{feedback_id}")
-                    return feedback.to_dict()
+                    return feedback
 
                 print(f"❌ Обращение #{feedback_id} не найдено")
                 return None
