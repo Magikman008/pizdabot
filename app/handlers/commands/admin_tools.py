@@ -203,7 +203,6 @@ async def cmd_admin_feedback(message: Message):
         await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
         return
 
-
     feedbacks = feedback_manager.get_all_feedback(limit=100)
     unread_count = feedback_manager.get_unread_count()
 
