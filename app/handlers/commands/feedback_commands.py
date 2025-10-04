@@ -151,11 +151,18 @@ async def process_feedback_message(message: Message, state: FSMContext):
     )
 
     # Создаем inline клавиатуру для подтверждения
+    # Изменить создание клавиатуры:
     confirm_keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ Да", callback_data="feedback_confirm"),
-                InlineKeyboardButton(text="❌ Нет", callback_data="feedback_cancel"),
+                InlineKeyboardButton(
+                    text="✅ Да",
+                    callback_data=f"feedback_confirm:{user_id}"
+                ),
+                InlineKeyboardButton(
+                    text="❌ Нет",
+                    callback_data=f"feedback_cancel:{user_id}"
+                ),
             ]
         ]
     )
@@ -203,94 +210,155 @@ async def process_non_text_feedback_message(message: Message, state: FSMContext)
     )
 
 
-@feedback_router.callback_query(F.data == "feedback_confirm")
+@feedback_router.callback_query(F.data.startswith("feedback_confirm:"))
 async def confirm_feedback_submission(callback: CallbackQuery, state: FSMContext):
     """
-    Обработка подтверждения отправки обращения
+    Обработка подтверждения отправки обращения с silent проверкой пользователя
+    Если пользователь пытается подтвердить чужой фидбек - ничего не происходит
     """
-    user_data = await state.get_data()
-    user_id = callback.from_user.id
+    try:
+        # Извлекаем user_id из callback_data
+        callback_parts = callback.data.split(":")
+        if len(callback_parts) != 2:
+            await callback.answer()  # Silent ignore неверного формата
+            return
 
-    print(f"✅ Подтверждение обращения от {user_id}")
+        callback_user_id = int(callback_parts[1])
+        actual_user_id = callback.from_user.id
 
-    # Сохраняем обращение в базу данных
-    feedback_id = feedback_manager.add_feedback(
-        user_id=user_data["user_id"],
-        username=user_data.get("username"),
-        first_name=user_data.get("first_name"),
-        last_name=user_data.get("last_name"),
-        message=user_data["feedback_message"],
-    )
+        # SILENT ПРОВЕРКА: Только автор может подтвердить свой фидбек
+        if actual_user_id != callback_user_id:
+            await callback.answer()  # Ничего не происходит
+            return
 
-    if feedback_id:
-        # Успешное сохранение
-        escaped_id = escape_markdown(str(feedback_id))
-        success_text = (
-            f"✅ *Обращение отправлено\\!*\n\n"
-            f"📋 *ID обращения:* \\#{escaped_id}\n\n"
-            f"Спасибо за обратную связь\\! "
-            f"Администраторы рассмотрят ваше сообщение\\."
-        )
+        # Дополнительная проверка FSM состояния
+        user_data = await state.get_data()
+        if not user_data or user_data.get("user_id") != actual_user_id:
+            await callback.answer()  # Silent ignore
+            return
 
-        await callback.message.edit_text(text=success_text, parse_mode="MarkdownV2")
-
-        # Отправляем уведомления администраторам
-        user_display = (
-            f"@{user_data.get('username')}"
-            if user_data.get("username")
-            else user_data.get("first_name", f"User {user_data['user_id']}")
-        )
-        message_preview = user_data["feedback_message"]
-        if len(message_preview) > 200:
-            message_preview = message_preview[:200] + "..."
-
-        # Асинхронно отправляем уведомления
-        asyncio.create_task(
-            notify_admins_about_new_feedback(
-                feedback_id,
-                user_display,
-                message_preview,
-                user_data["feedback_message"],
-            )
-        )
+        # Проверяем состояние FSM
+        current_state = await state.get_state()
+        if current_state != FeedbackStates.confirming_send.state:
+            await callback.answer()  # Silent ignore
+            return
 
         print(
-            f"🎉 УСПЕХ: Обращение #{feedback_id} от {user_id} сохранено и отправлены уведомления"
+            f"✅ ПРОВЕРКА ПРОЙДЕНА: Пользователь {actual_user_id} подтверждает свой фидбек")
+
+        # ОСНОВНАЯ ЛОГИКА ПОДТВЕРЖДЕНИЯ (из оригинального кода)
+        # Сохраняем обращение в базу данных
+        feedback_id = feedback_manager.add_feedback(
+            user_id=user_data["user_id"],
+            username=user_data.get("username"),
+            first_name=user_data.get("first_name"),
+            last_name=user_data.get("last_name"),
+            message=user_data["feedback_message"],
         )
 
-    else:
-        # Ошибка сохранения
-        error_text = (
-            "❌ *Произошла ошибка при отправке обращения*\n\n"
-            "Попробуйте позже или обратитесь к администраторам\\."
-        )
+        if feedback_id:
+            # Успешное сохранение
+            escaped_id = escape_markdown(str(feedback_id))
+            success_text = (
+                f"✅ *Обращение отправлено!*\n\n"
+                f"📋 *ID обращения:* #{escaped_id}\n\n"
+                f"Спасибо за обратную связь! "
+                f"Администраторы рассмотрят ваше сообщение."
+            )
+            await callback.message.edit_text(text=escape_markdown(success_text), parse_mode="MarkdownV2")
 
-        await callback.message.edit_text(text=error_text, parse_mode="MarkdownV2")
+            # Отправляем уведомления администраторам
+            user_display = (
+                f"@{user_data.get('username')}"
+                if user_data.get("username")
+                else user_data.get("first_name", f"User {user_data['user_id']}")
+            )
+            message_preview = user_data["feedback_message"]
+            if len(message_preview) > 200:
+                message_preview = message_preview[:200] + "..."
 
-        print(f"💥 ОШИБКА: Не удалось сохранить обращение от {user_id}")
+            # Асинхронно отправляем уведомления
+            asyncio.create_task(
+                notify_admins_about_new_feedback(
+                    feedback_id,
+                    user_display,
+                    message_preview,
+                    user_data["feedback_message"],
+                )
+            )
+            print(
+                f"🎉 УСПЕХ: Обращение #{feedback_id} от {actual_user_id} сохранено и отправлены уведомления")
+        else:
+            # Ошибка сохранения
+            error_text = (
+                "❌ *Произошла ошибка при отправке обращения*\n\n"
+                "Попробуйте позже или обратитесь к администраторам."
+            )
+            await callback.message.edit_text(text=escape_markdown(error_text), parse_mode="MarkdownV2")
+            print(f"💥 ОШИБКА: Не удалось сохранить обращение от {actual_user_id}")
 
-    # Очищаем состояние FSM
-    await state.clear()
-    await callback.answer()
+        # Очищаем состояние FSM
+        await state.clear()
+        await callback.answer()
+
+    except ValueError:
+        await callback.answer()  # Silent ignore неверного ID
+        return
+    except Exception as e:
+        await callback.answer()  # Silent ignore любых ошибок
+        print(f"❌ ОШИБКА в confirm_feedback_submission: {e}")
+        return
 
 
-@feedback_router.callback_query(F.data == "feedback_cancel")
+@feedback_router.callback_query(F.data.startswith("feedback_cancel:"))
 async def cancel_feedback_submission(callback: CallbackQuery, state: FSMContext):
     """
-    Обработка отмены отправки обращения
+    Обработка отмены отправки обращения с silent проверкой пользователя
+    Если пользователь пытается отменить чужой фидбек - ничего не происходит
     """
-    user_id = callback.from_user.id
-    print(f"❌ Отмена обращения от {user_id}")
+    try:
+        # Извлекаем user_id из callback_data
+        callback_parts = callback.data.split(":")
+        if len(callback_parts) != 2:
+            await callback.answer()  # Silent ignore неверного формата
+            return
 
-    cancel_text = (
-        "❌ *Отправка обращения отменена*\n\n"
-        "Чтобы начать заново, используйте команду /feedback"
-    )
+        callback_user_id = int(callback_parts[1])
+        actual_user_id = callback.from_user.id
 
-    await callback.message.edit_text(text=cancel_text, parse_mode="MarkdownV2")
+        # SILENT ПРОВЕРКА: Только автор может отменить свой фидбек
+        if actual_user_id != callback_user_id:
+            await callback.answer()  # Ничего не происходит
+            return
 
-    await state.clear()
-    await callback.answer()
+        # Дополнительная проверка FSM состояния
+        user_data = await state.get_data()
+        if user_data and user_data.get("user_id") != actual_user_id:
+            await callback.answer()  # Silent ignore
+            return
+
+        # Проверяем состояние FSM
+        current_state = await state.get_state()
+        if current_state != FeedbackStates.confirming_send.state:
+            await callback.answer()  # Silent ignore
+            return
+
+        # ОСНОВНАЯ ЛОГИКА ОТМЕНЫ (из оригинального кода)
+        cancel_text = (
+            "❌*Отправка обращения отменена*\n\n"
+            "Чтобы начать заново, используйте команду /feedback"
+        )
+        await callback.message.edit_text(text=escape_markdown(cancel_text), parse_mode="MarkdownV2")
+        await state.clear()
+        await callback.answer()
+
+    except ValueError:
+        await callback.answer()  # Silent ignore неверного ID
+        return
+    except Exception as e:
+        await callback.answer()  # Silent ignore любых ошибок
+        print(f"❌ ОШИБКА в cancel_feedback_submission: {e}")
+        return
 
 
 @feedback_router.message(Command("feedback_detail"))
