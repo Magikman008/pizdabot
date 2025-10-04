@@ -19,6 +19,17 @@ class SubscriptionManager:
     def __init__(self, session_maker):
         self.session_maker = session_maker
 
+    @classmethod
+    def get_types_dict(cls) -> dict:
+        return {
+            # SubscriptionType.YOOKASSA: cls.SUBSCRIPTION_PRICE_RUBS,
+            SubscriptionType.TELEGRAM_STARS: cls.SUBSCRIPTION_PRICE_STARS,
+        }
+
+    @classmethod
+    def get_price_by_name(cls, name):
+        return cls.get_types_dict().get(SubscriptionType(name))
+
     def has_active_subscription(self, tg_chat_id: int) -> bool:
         """Есть ли активная подписка у пользователя/чата"""
         with self.session_maker() as session:
@@ -109,7 +120,6 @@ class SubscriptionManager:
             True,
             f"""✅ **Подписка активирована!**
 
-⭐ Оплачено: {self.SUBSCRIPTION_PRICE_STARS} звёздочка
 📅 Действует до: {new_expiry.strftime('%d.%m.%Y %H:%M')}
 
 🚀 Теперь вам доступны все премиум-функции бота!""",

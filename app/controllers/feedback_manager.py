@@ -126,6 +126,7 @@ class FeedbackManager:
 
                 if feedback and not feedback.is_read:
                     feedback.mark_as_read()
+                    session.commit()
                     print(f"👁️ Обращение #{feedback_id} отмечено как прочитанное")
                     return True
 
