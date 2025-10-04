@@ -156,12 +156,10 @@ async def process_feedback_message(message: Message, state: FSMContext):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ Да",
-                    callback_data=f"feedback_confirm:{user_id}"
+                    text="✅ Да", callback_data=f"feedback_confirm:{user_id}"
                 ),
                 InlineKeyboardButton(
-                    text="❌ Нет",
-                    callback_data=f"feedback_cancel:{user_id}"
+                    text="❌ Нет", callback_data=f"feedback_cancel:{user_id}"
                 ),
             ]
         ]
@@ -244,7 +242,8 @@ async def confirm_feedback_submission(callback: CallbackQuery, state: FSMContext
             return
 
         print(
-            f"✅ ПРОВЕРКА ПРОЙДЕНА: Пользователь {actual_user_id} подтверждает свой фидбек")
+            f"✅ ПРОВЕРКА ПРОЙДЕНА: Пользователь {actual_user_id} подтверждает свой фидбек"
+        )
 
         # ОСНОВНАЯ ЛОГИКА ПОДТВЕРЖДЕНИЯ (из оригинального кода)
         # Сохраняем обращение в базу данных
@@ -265,7 +264,9 @@ async def confirm_feedback_submission(callback: CallbackQuery, state: FSMContext
                 f"Спасибо за обратную связь! "
                 f"Администраторы рассмотрят ваше сообщение."
             )
-            await callback.message.edit_text(text=escape_markdown(success_text), parse_mode="MarkdownV2")
+            await callback.message.edit_text(
+                text=escape_markdown(success_text), parse_mode="MarkdownV2"
+            )
 
             # Отправляем уведомления администраторам
             user_display = (
@@ -287,14 +288,17 @@ async def confirm_feedback_submission(callback: CallbackQuery, state: FSMContext
                 )
             )
             print(
-                f"🎉 УСПЕХ: Обращение #{feedback_id} от {actual_user_id} сохранено и отправлены уведомления")
+                f"🎉 УСПЕХ: Обращение #{feedback_id} от {actual_user_id} сохранено и отправлены уведомления"
+            )
         else:
             # Ошибка сохранения
             error_text = (
                 "❌ *Произошла ошибка при отправке обращения*\n\n"
                 "Попробуйте позже или обратитесь к администраторам."
             )
-            await callback.message.edit_text(text=escape_markdown(error_text), parse_mode="MarkdownV2")
+            await callback.message.edit_text(
+                text=escape_markdown(error_text), parse_mode="MarkdownV2"
+            )
             print(f"💥 ОШИБКА: Не удалось сохранить обращение от {actual_user_id}")
 
         # Очищаем состояние FSM
@@ -348,7 +352,9 @@ async def cancel_feedback_submission(callback: CallbackQuery, state: FSMContext)
             "❌*Отправка обращения отменена*\n\n"
             "Чтобы начать заново, используйте команду /feedback"
         )
-        await callback.message.edit_text(text=escape_markdown(cancel_text), parse_mode="MarkdownV2")
+        await callback.message.edit_text(
+            text=escape_markdown(cancel_text), parse_mode="MarkdownV2"
+        )
         await state.clear()
         await callback.answer()
 
@@ -402,7 +408,6 @@ async def cmd_feedback_detail(message: Message):
 
         status_text = "Прочитано" if feedback_data["is_read"] else "Новое"
         created_at = feedback_data["created_at"][:16].replace("T", " ")
-
 
         # Экранируем для MarkdownV2
         escaped_id = escape_markdown(str(feedback_data["id"]))

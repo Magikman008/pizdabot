@@ -43,7 +43,7 @@ async def show_subscribers(message: Message):
     for i, (tg_chat_id, sub) in enumerate(subscribers.items(), 1):
         expires_at = sub.expires_at
         if isinstance(expires_at, datetime):
-            expires_at_str = expires_at.strftime('%d.%m.%y %H:%M')
+            expires_at_str = expires_at.strftime("%d.%m.%y %H:%M")
         else:
             expires_at_str = str(expires_at)[:16]  # на всякий случай
 

@@ -93,8 +93,9 @@ class FeedbackManager:
     def get_feedback_by_id(self, feedback_id: int) -> Optional[Dict[str, Any]]:
         try:
             with self.session_maker() as session:
-                feedback = session.query(Feedback).filter(
-                    Feedback.id == feedback_id).first()
+                feedback = (
+                    session.query(Feedback).filter(Feedback.id == feedback_id).first()
+                )
 
                 if feedback:
                     print(f"📋 Получено обращение #{feedback_id}")

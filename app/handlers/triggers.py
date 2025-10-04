@@ -15,7 +15,7 @@ def is_caps_message(text):
         return False
 
     # Убираем пунктуацию и пробелы для анализа
-    clean_text = re.sub(r'[^\w\u0400-\u04FF]', '', text, flags=re.UNICODE)
+    clean_text = re.sub(r"[^\w\u0400-\u04FF]", "", text, flags=re.UNICODE)
 
     # Если после очистки нет букв, возвращаем False
     if not clean_text:
@@ -76,8 +76,8 @@ async def handle_triggers(message: Message, state: FSMContext):
             # Дополнительная проверка: триггер должен быть отдельным словом/фразой
             # (не частью другого слова)
             if (
-                    len(text) == len(trigger_lower)
-                    or text[-(len(trigger_lower) + 1)] in " .,!?;:"
+                len(text) == len(trigger_lower)
+                or text[-(len(trigger_lower) + 1)] in " .,!?;:"
             ):
                 # НОВОЕ: если исходное сообщение КАПСЛОКОМ, отвечаем КАПСЛОКОМ
                 final_response = response.upper() if is_caps else response
