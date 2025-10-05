@@ -1,5 +1,6 @@
 from app.db import SessionLocal
 from .admin_notifier import AdminNotifier
+from .chat_info_manager import ChatInfoManager
 from .chat_settings import ChatSettingsManager
 from .feedback_manager import FeedbackManager
 from .statistics_controller import BotStatistics
@@ -19,6 +20,8 @@ __all__ = [
     "feedback_manager",
     "AdminNotifier",
     "FeedbackManager",
+    "ChatInfoManager",
+    "chat_info_manager",
 ]
 
 # Создаем глобальный экземпляр менеджера настроек
@@ -36,3 +39,5 @@ user_trigger_manager = UserTriggerManager(SessionLocal)
 admin_notifier = AdminNotifier(SessionLocal)
 
 feedback_manager = FeedbackManager(SessionLocal)
+
+chat_info_manager = ChatInfoManager(SessionLocal)

@@ -1,5 +1,4 @@
 from aiogram import Router
-
 from app.handlers.commands import (
     admin_tools,
     chat_settings,
@@ -7,6 +6,7 @@ from app.handlers.commands import (
     custom_triggers,
     help_commands,
     subscription,
+    chat_membership,
 )
 
 commands_router = Router()
@@ -16,5 +16,6 @@ commands_router.include_router(chat_stats.chat_stats_router)
 commands_router.include_router(custom_triggers.custom_triggers_router)
 commands_router.include_router(help_commands.help_router)
 commands_router.include_router(subscription.subscription_router)
+commands_router.include_router(chat_membership.chat_membership_router)
 
 __all__ = ["commands_router"]
