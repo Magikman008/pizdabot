@@ -7,8 +7,10 @@ from datetime import datetime, timedelta
 from typing import Dict
 
 from sqlalchemy import select, func, desc
+from sqlalchemy.sql.sqltypes import Integer
 
 from app.models import RoastWord, RoastEvent
+from app.models.chat_info import ChatInfo
 
 
 class BotStatistics:
@@ -50,17 +52,20 @@ class BotStatistics:
             session.commit()
 
     def get_total_stats(
-        self, chat_id: int | None = None
+            self, chat_id: int | None = None
     ) -> Dict[str, int | str | None]:
         """
         Общая статистика:
-        - всего прожарок
-        - количество прожаренных пользователей
-        - количество дней с прожарками
-        - дата первой прожарки
-        - количество уникальных чатов (только если chat_id=None)
+         - всего прожарок
+         - количество прожаренных пользователей
+         - количество дней с прожарками
+         - дата первой прожарки
+         - количество уникальных чатов (по chat_info)
+         - количество активных и неактивных чатов (по chat_info)
         """
+
         with self.session_maker() as session:
+            # Подготовка запросов по RoastEvent
             total_roasts_stmt = select(func.count(RoastEvent.id))
             unique_users_stmt = select(func.count(func.distinct(RoastEvent.user_id)))
             days_active_stmt = select(
@@ -74,37 +79,45 @@ class BotStatistics:
 
             if chat_id is not None:
                 total_roasts_stmt = total_roasts_stmt.where(
-                    RoastEvent.chat_id == chat_id
-                )
+                    RoastEvent.chat_id == chat_id)
                 unique_users_stmt = unique_users_stmt.where(
-                    RoastEvent.chat_id == chat_id
-                )
+                    RoastEvent.chat_id == chat_id)
                 days_active_stmt = days_active_stmt.where(RoastEvent.chat_id == chat_id)
                 first_roast_stmt = first_roast_stmt.where(RoastEvent.chat_id == chat_id)
 
-            total_roasts = session.scalar(total_roasts_stmt)
-            unique_users = session.scalar(unique_users_stmt)
-            days_active = session.scalar(days_active_stmt)
-            first_roast = session.scalar(first_roast_stmt)
+            # Выполнение запросов
+            total_roasts = session.scalar(total_roasts_stmt) or 0
+            unique_users = session.scalar(unique_users_stmt) or 0
+            days_active = session.scalar(days_active_stmt) or 0
+            first_roast_ts = session.scalar(first_roast_stmt)
+            first_roast = first_roast_ts.isoformat() if first_roast_ts else None
 
-            # считаем количество уникальных чатов только если chat_id не задан
-            unique_chats = None
+            result = {
+                "total_roasts": total_roasts,
+                "total_roasted_users": unique_users,
+                "days_active": days_active,
+                "first_roast": first_roast,
+            }
+
+            # Статистика по chat_info только если общий вызов
             if chat_id is None:
-                unique_chats = session.scalar(
-                    select(func.count(func.distinct(RoastEvent.chat_id)))
-                )
+                # Всего уникальных чатов в chat_info
+                total_chats = session.scalar(
+                    select(func.count(ChatInfo.id))
+                ) or 0
+                # Активные чаты
+                active_chats = session.scalar(
+                    select(func.count()).select_from(ChatInfo).where(
+                        ChatInfo.is_active == True)
+                ) or 0
+                # Неактивные чаты
+                inactive_chats = total_chats - active_chats
 
-        result = {
-            "total_roasts": total_roasts or 0,
-            "total_roasted_users": unique_users or 0,
-            "days_active": days_active or 0,
-            "first_roast": first_roast.isoformat() if first_roast else None,
-        }
+                result["total_chats"] = total_chats
+                result["active_chats"] = active_chats
+                result["inactive_chats"] = inactive_chats
 
-        if chat_id is None:
-            result["unique_chats"] = unique_chats or 0
-
-        return result
+            return result
 
     def get_top_triggers(
         self, chat_id: int | None = None, limit: int = 10
@@ -167,49 +180,78 @@ class BotStatistics:
         ]
 
     def get_chat_stats_summary(self, chat_id: int) -> str:
-        """Получить текстовое резюме статистики"""
+        """Получить текстовое резюме статистики по конкретному чату"""
         total = self.get_total_stats(chat_id)
         last_days = self.get_daily_stats(chat_id, days=3)
-        top_triggers = self.get_top_triggers(chat_id, 5)
+        top_triggers = self.get_top_triggers(chat_id, limit=5)
 
-        summary = f"""📊 Статистика бота
+        # Форматируем дату первой прожарки
+        first_roast = total.get('first_roast')
+        if first_roast:
+            try:
+                dt = datetime.fromisoformat(first_roast)
+                first_roast_str = dt.strftime("%d.%m.%Y %H:%M")
+            except ValueError:
+                first_roast_str = first_roast
+        else:
+            first_roast_str = "—"
+
+        summary = f"""📊 Статистика бота в чате
 
 🔥 Всего подъёбов: {total['total_roasts']}
 👥 Пользователей подъёбано: {total['total_roasted_users']}
-📅 Дней активности: {total['days_active']}
+📅 Дней активности: {total['days_active']}"""
 
-Последние 3 дня:"""
-
+        summary += "\n\nПоследние 3 дня:"
         for day in last_days:
             summary += f"\n{day['date']}: 🔥 {day['roasts']}"
 
         summary += "\n\nТоп-5 триггеров:"
-
         for i, (trigger, count) in enumerate(top_triggers.items(), 1):
-            summary += f"\n{i}. '{trigger}' - {count} раз"
+            summary += f"\n{i}. «{trigger}» – {count} раз"
 
         return summary
 
     def get_admin_stats(self) -> str:
-        """Получить детальную статистику для админов"""
+        """Получить детальную статистику для админов по всем чатам"""
+
         total = self.get_total_stats()
         top_triggers = self.get_top_triggers(limit=30)
         last_days = self.get_daily_stats(days=7)
 
-        detailed = f"""📊 Статистика по всем чатам
+        # Получаем общее количество участников из всех групп
+        with self.session_maker() as session:
+            total_members = session.scalar(
+                select(func.sum(
+                    func.cast(
+                        func.regexp_replace(ChatInfo.members_count, r'[^0-9]', ''),
+                        Integer
+                    )
+                )).where(
+                    ChatInfo.is_active == True,
+                    ChatInfo.members_count.regexp_match(r'^[0-9]+$'),
+                    ChatInfo.chat_type.in_(['group', 'supergroup'])
+                )
+            ) or 0
+
+        detailed = f"""📊 Общая статистика по всем чатам
 
 🔥 Всего подъёбов: {total['total_roasts']}
 👥 Уникальных пользователей: {total['total_roasted_users']}
-💬 Уникальных групп: {total['unique_chats']}
-📅 Дней активности: {total['days_active']}
+💬 Всего чатов: {total['total_chats']}
+✅ Активных чатов: {total['active_chats']}
+❌ Неактивных чатов: {total['inactive_chats']}
+👫 Всего участников в группах: {total_members}
+📅 Дней активности: {total['days_active']}"""
 
-Активность за последние 7 дней:"""
-
+        detailed += "\n\nАктивность за последние 7 дней:"
         for day in last_days:
             detailed += f"\n{day['date']}: 🔥 {day['roasts']} 👥 {day['unique_users']}"
 
         detailed += "\n\nТоп-10 триггеров:"
         for i, (trigger, count) in enumerate(top_triggers.items(), 1):
-            detailed += f"\n{i}. '{trigger}' - {count} раз"
+            if i <= 10:  # Ограничиваем до 10
+                detailed += f"\n{i}. «{trigger}» – {count} раз"
 
         return detailed
+

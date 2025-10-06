@@ -32,7 +32,7 @@ async def bot_added_to_chat(event: ChatMemberUpdated):
         if chat.type in ["group", "supergroup"]:
             try:
                 members_count = await bot.get_chat_member_count(chat.id)
-            except (TelegramBadRequest) as e:
+            except TelegramBadRequest as e:
                 logger.warning(f"Не удалось получить количество участников для чата {chat.id}: {e}")
                 members_count = "Недоступно"
 
@@ -55,10 +55,6 @@ async def bot_added_to_chat(event: ChatMemberUpdated):
 
         # Сохраняем информацию
         await chat_info_manager.save_chat_info(chat_data)
-
-        # Инициализируем настройки чата
-        # settings_manager = ChatSettingsManager()
-        # await settings_manager.get_or_create_settings(chat.id)
 
         # Отправляем приветствие
         welcome_message = await create_welcome_message(chat_data)
@@ -95,7 +91,6 @@ async def create_welcome_message(chat_data: dict) -> str:
     if chat_data['chat_type'] == "private":
         return None
 
-    return f"""👋 Привет! Я...\n
-    да похуй в целом.\n 
-    Продолжай пиздеть в чате, а если что-то непонятно -- используй /help.
+    return f"""👋 Привет! Я... да похуй в целом.
+Продолжай пиздеть в чате, а если что-то непонятно -- используй /help.
 """

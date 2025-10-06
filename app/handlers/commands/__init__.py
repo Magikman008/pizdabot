@@ -6,8 +6,8 @@ from app.handlers.commands import (
     custom_triggers,
     help_commands,
     subscription,
-    chat_membership,
 )
+from app.handlers import chat_membership
 
 commands_router = Router()
 commands_router.include_router(admin_tools.admin_router)

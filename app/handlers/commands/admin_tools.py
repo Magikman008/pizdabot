@@ -1,14 +1,16 @@
+import logging
 from datetime import datetime
 
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from app.controllers import admin_notifier
+from app.controllers import admin_notifier, chat_info_manager
 from app.controllers import bot_stats, subscription_manager
 from app.controllers import feedback_manager
+from app.models.chat_info import ChatInfo
 from app.utils.decorators import admin_only
-from app.utils.tools import escape_markdown, is_admin
+from app.utils.tools import escape_markdown, is_admin, split_long_message
 
 admin_router = Router()
 
@@ -245,24 +247,142 @@ async def cmd_admin_feedback(message: Message):
 @admin_router.message(Command("admin_help"))
 @admin_only
 async def cmd_admin_help(message: Message):
-    help_text = (
-        "👑 *Административные команды:*\n\n"
-        "*Обратная связь:*\n"
-        "• /admin_register — регистрация для уведомлений о новых обращениях. "
-        "*Обязательно выполните* для получения уведомлений о новых обращениях!\n"
-        "• /admin_feedback — просмотр всех обращений\n"
-        "• /feedback_unread — только непрочитанные\n"
-        "• /feedback_detail [ID] — детальный просмотр обращения\n"
-        "• /feedback_user [user_id] — обращения пользователя\n"
-        "• /feedback_stats — статистика по обращениям\n\n"
-        "*Общее управление:*\n"
-        "• /admin_stats — детальная статистика бота\n"
-        "• /reset_settings — сбросить настройки чата\n"
-        "• /subscribers — список активных подписчиков\n"
-        "• /feedback_mark_all_read — отметить все как прочитанные\n"
-        "• /feedback_delete [ID] — удалить обращение\n\n"
-        "📊 *Дополнительно:*\n"
-        "• /admin_help — эта справка\n\n"
+    help_text = """🔧 **Административные команды:**
+
+📊 **Статистика:**
+• `/admin_stats` - детальная статистика бота
+• `/export_stats` - экспорт статистики в JSON
+
+🗑 **Управление данными:**  
+• `/clear_stats` - очистить всю статистику
+• `/remove_all_triggers` - удалить все триггеры чата
+• `/reset_settings` - сбросить настройки чата
+
+💬 **Управление чатами:**
+• `/update_chats` - обновить информацию о всех чатах
+• `/show_chats` - показать список всех чатов
+
+📝 **Система обратной связи:**
+• `/admin_register` - регистрация для уведомлений
+• `/admin_feedback` - просмотр всех обращений
+• `/feedback_unread` - непрочитанные обращения
+• `/feedback_stats` - статистика по обращениям
+• `/feedback_mark_all_read` - отметить все как прочитанные
+
+ℹ️ **Справка:**
+• `/admin_help` - эта справка"""
+
+    await message.answer(escape_markdown(help_text), parse_mode="MarkdownV2")
+
+
+@admin_router.message(Command("update_chats"))
+@admin_only
+async def update_all_chats_command(message: Message):
+    """Команда для обновления информации о всех чатах"""
+    start_time = datetime.now()
+    status_msg = await message.reply(
+        "🔄 Обновление информации о чатах\n\n"
+        "⏳ Получаем список активных чатов и начинаем обновление..."
     )
-    text = help_text
-    await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
+
+    try:
+        stats = await chat_info_manager.update_all_chats_info()
+        end_time = datetime.now()
+        execution_time = (end_time - start_time).total_seconds()
+
+        report = f"""✅ **Обновление чатов завершено**
+
+📊 **Статистика обновления:**
+• Всего чатов обработано: **{stats['total']}**
+• Успешно обновлено: **{stats['updated']}** ✅
+• Деактивировано (бот удален): **{stats['deactivated']}** ⚠️
+• Ошибок при обновлении: **{stats['errors']}** ❌
+
+⏱ **Время выполнения:** {execution_time:.1f} сек
+📅 **Завершено:** {end_time.strftime('%H:%M:%S %d.%m.%Y')}"""
+
+        if stats['errors'] > 0:
+            report += "\n\n⚠️ *Подробности ошибок смотрите в логах бота*"
+
+        if stats['deactivated'] > 0:
+            report += f"\n\n📝 *{stats['deactivated']} чатов помечено как неактивных (бот удален)*"
+
+        await status_msg.edit_text(report, parse_mode="Markdown")
+
+    except Exception as e:
+        error_msg = f"❌ **Ошибка при обновлении чатов**\n\n🔍 Детали: `{str(e)}`"
+        await status_msg.edit_text(error_msg, parse_mode="Markdown")
+
+
+@admin_router.message(Command("show_chats"))
+@admin_only
+async def show_chats_command(message: Message):
+    """Команда для просмотра всех чатов"""
+
+    try:
+        chats_info = await get_all_chats_info()
+
+        if not chats_info:
+            await message.reply("📭 Чатов не найдено")
+            return
+
+        # Формируем сообщение с информацией о чатах
+        response = "📋 **Все чаты бота:**\n\n"
+
+        for i, chat in enumerate(chats_info, 1):
+            # Форматируем дату добавления
+            added_date = chat.added_at.strftime(
+                "%d.%m.%Y %H:%M") if chat.added_at else "—"
+
+            # Определяем статус бота
+            status_emoji = "✅" if chat.is_active else "❌"
+            status_text = "активен" if chat.is_active else "неактивен"
+
+            # Форматируем тип чата
+            chat_type_map = {
+                'private': '👤 Личный',
+                'group': '👥 Группа',
+                'supergroup': '👥 Супергруппа',
+                'channel': '📢 Канал'
+            }
+            chat_type_str = chat_type_map.get(chat.chat_type, chat.chat_type)
+
+            # Обрезаем длинные названия и описания
+            title = chat.chat_title[:30] + "..." if len(
+                chat.chat_title) > 30 else chat.chat_title
+            description = (chat.chat_description[
+                           :50] + "...") if chat.chat_description and len(
+                chat.chat_description) > 50 else (chat.chat_description or "—")
+
+            response += f"""**{i}. {title}**
+{chat_type_str} | {chat.members_count or "—"} чел.
+📅 Добавлен: {added_date}
+👤 Кем: @{chat.added_by_username or "неизвестно"}
+📝 Описание: {description}
+🤖 Бот: {status_emoji} {status_text}
+
+"""
+
+        # Telegram ограничивает размер сообщения, разбиваем если нужно
+        if len(response) > 4000:
+            messages = split_long_message(response, 4000)
+            for msg in messages:
+                await message.reply(msg, parse_mode="Markdown")
+        else:
+            await message.reply(response, parse_mode="Markdown")
+
+    except Exception as e:
+        await message.reply(f"❌ Ошибка при получении списка чатов: {str(e)}")
+        logging.error(f"Ошибка команды show_chats: {e}")
+
+
+async def get_all_chats_info():
+    """Получить информацию о всех чатах, отсортированную по дате добавления"""
+
+    try:
+        with chat_info_manager.session_maker() as session:
+            chats = session.query(ChatInfo).order_by(ChatInfo.added_at.desc()).all()
+            return chats
+    except Exception as e:
+        logging.error(f"Ошибка получения списка чатов: {e}")
+        return []
