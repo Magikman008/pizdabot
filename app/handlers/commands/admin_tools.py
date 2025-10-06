@@ -301,10 +301,10 @@ async def update_all_chats_command(message: Message):
 ⏱ **Время выполнения:** {execution_time:.1f} сек
 📅 **Завершено:** {end_time.strftime('%H:%M:%S %d.%m.%Y')}"""
 
-        if stats['errors'] > 0:
+        if stats["errors"] > 0:
             report += "\n\n⚠️ *Подробности ошибок смотрите в логах бота*"
 
-        if stats['deactivated'] > 0:
+        if stats["deactivated"] > 0:
             report += f"\n\n📝 *{stats['deactivated']} чатов помечено как неактивных (бот удален)*"
 
         await status_msg.edit_text(report, parse_mode="Markdown")
@@ -331,8 +331,9 @@ async def show_chats_command(message: Message):
 
         for i, chat in enumerate(chats_info, 1):
             # Форматируем дату добавления
-            added_date = chat.added_at.strftime(
-                "%d.%m.%Y %H:%M") if chat.added_at else "—"
+            added_date = (
+                chat.added_at.strftime("%d.%m.%Y %H:%M") if chat.added_at else "—"
+            )
 
             # Определяем статус бота
             status_emoji = "✅" if chat.is_active else "❌"
@@ -340,19 +341,24 @@ async def show_chats_command(message: Message):
 
             # Форматируем тип чата
             chat_type_map = {
-                'private': '👤 Личный',
-                'group': '👥 Группа',
-                'supergroup': '👥 Супергруппа',
-                'channel': '📢 Канал'
+                "private": "👤 Личный",
+                "group": "👥 Группа",
+                "supergroup": "👥 Супергруппа",
+                "channel": "📢 Канал",
             }
             chat_type_str = chat_type_map.get(chat.chat_type, chat.chat_type)
 
             # Обрезаем длинные названия и описания
-            title = chat.chat_title[:30] + "..." if len(
-                chat.chat_title) > 30 else chat.chat_title
-            description = (chat.chat_description[
-                           :50] + "...") if chat.chat_description and len(
-                chat.chat_description) > 50 else (chat.chat_description or "—")
+            title = (
+                chat.chat_title[:30] + "..."
+                if len(chat.chat_title) > 30
+                else chat.chat_title
+            )
+            description = (
+                (chat.chat_description[:50] + "...")
+                if chat.chat_description and len(chat.chat_description) > 50
+                else (chat.chat_description or "—")
+            )
 
             response += f"""**{i}. {title}**
 {chat_type_str} | {chat.members_count or "—"} чел.

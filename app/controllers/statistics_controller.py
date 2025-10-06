@@ -52,7 +52,7 @@ class BotStatistics:
             session.commit()
 
     def get_total_stats(
-            self, chat_id: int | None = None
+        self, chat_id: int | None = None
     ) -> Dict[str, int | str | None]:
         """
         Общая статистика:
@@ -79,9 +79,11 @@ class BotStatistics:
 
             if chat_id is not None:
                 total_roasts_stmt = total_roasts_stmt.where(
-                    RoastEvent.chat_id == chat_id)
+                    RoastEvent.chat_id == chat_id
+                )
                 unique_users_stmt = unique_users_stmt.where(
-                    RoastEvent.chat_id == chat_id)
+                    RoastEvent.chat_id == chat_id
+                )
                 days_active_stmt = days_active_stmt.where(RoastEvent.chat_id == chat_id)
                 first_roast_stmt = first_roast_stmt.where(RoastEvent.chat_id == chat_id)
 
@@ -102,14 +104,16 @@ class BotStatistics:
             # Статистика по chat_info только если общий вызов
             if chat_id is None:
                 # Всего уникальных чатов в chat_info
-                total_chats = session.scalar(
-                    select(func.count(ChatInfo.id))
-                ) or 0
+                total_chats = session.scalar(select(func.count(ChatInfo.id))) or 0
                 # Активные чаты
-                active_chats = session.scalar(
-                    select(func.count()).select_from(ChatInfo).where(
-                        ChatInfo.is_active == True)
-                ) or 0
+                active_chats = (
+                    session.scalar(
+                        select(func.count())
+                        .select_from(ChatInfo)
+                        .where(ChatInfo.is_active == True)
+                    )
+                    or 0
+                )
                 # Неактивные чаты
                 inactive_chats = total_chats - active_chats
 
@@ -186,7 +190,7 @@ class BotStatistics:
         top_triggers = self.get_top_triggers(chat_id, limit=5)
 
         # Форматируем дату первой прожарки
-        first_roast = total.get('first_roast')
+        first_roast = total.get("first_roast")
         if first_roast:
             try:
                 dt = datetime.fromisoformat(first_roast)
@@ -221,18 +225,25 @@ class BotStatistics:
 
         # Получаем общее количество участников из всех групп
         with self.session_maker() as session:
-            total_members = session.scalar(
-                select(func.sum(
-                    func.cast(
-                        func.regexp_replace(ChatInfo.members_count, r'[^0-9]', ''),
-                        Integer
+            total_members = (
+                session.scalar(
+                    select(
+                        func.sum(
+                            func.cast(
+                                func.regexp_replace(
+                                    ChatInfo.members_count, r"[^0-9]", ""
+                                ),
+                                Integer,
+                            )
+                        )
+                    ).where(
+                        ChatInfo.is_active == True,
+                        ChatInfo.members_count.regexp_match(r"^[0-9]+$"),
+                        ChatInfo.chat_type.in_(["group", "supergroup"]),
                     )
-                )).where(
-                    ChatInfo.is_active == True,
-                    ChatInfo.members_count.regexp_match(r'^[0-9]+$'),
-                    ChatInfo.chat_type.in_(['group', 'supergroup'])
                 )
-            ) or 0
+                or 0
+            )
 
         detailed = f"""📊 Общая статистика по всем чатам
 
@@ -254,4 +265,3 @@ class BotStatistics:
                 detailed += f"\n{i}. «{trigger}» – {count} раз"
 
         return detailed
-

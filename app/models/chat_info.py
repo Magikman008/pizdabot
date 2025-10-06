@@ -8,8 +8,9 @@ class ChatInfo(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     chat_id = Column(BigInteger, unique=True, index=True, nullable=False)
-    chat_type = Column(String(20),
-                       nullable=False)  # private, group, supergroup, channel
+    chat_type = Column(
+        String(20), nullable=False
+    )  # private, group, supergroup, channel
     chat_title = Column(String(255))
     chat_username = Column(String(255))
     chat_description = Column(Text)

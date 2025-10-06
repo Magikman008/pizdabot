@@ -1,6 +1,7 @@
 """
 Менеджер для управления информацией о чатах
 """
+
 import logging
 from datetime import datetime
 from typing import Optional, List, Dict
@@ -25,9 +26,11 @@ class ChatInfoManager:
         try:
             with self.session_maker() as session:
                 # Проверяем, есть ли уже запись о чате
-                existing_chat = session.query(ChatInfo).filter(
-                    ChatInfo.chat_id == chat_data['chat_id']
-                ).first()
+                existing_chat = (
+                    session.query(ChatInfo)
+                    .filter(ChatInfo.chat_id == chat_data["chat_id"])
+                    .first()
+                )
 
                 if existing_chat:
                     # Обновляем существующую запись
@@ -48,16 +51,19 @@ class ChatInfoManager:
                     session.commit()
                     session.refresh(chat_info)
                     logger.info(
-                        f"Сохранена информация о новом чате {chat_data['chat_id']}")
+                        f"Сохранена информация о новом чате {chat_data['chat_id']}"
+                    )
                     return chat_info
 
         except IntegrityError as e:
             logger.error(
-                f"Ошибка целостности при сохранении чата {chat_data['chat_id']}: {e}")
+                f"Ошибка целостности при сохранении чата {chat_data['chat_id']}: {e}"
+            )
             return None
         except Exception as e:
             logger.error(
-                f"Ошибка при сохранении информации о чате {chat_data['chat_id']}: {e}")
+                f"Ошибка при сохранении информации о чате {chat_data['chat_id']}: {e}"
+            )
             return None
 
     async def update_chat_status(self, chat_id: int, is_active: bool) -> bool:
@@ -66,9 +72,9 @@ class ChatInfoManager:
         """
         try:
             with self.session_maker() as session:
-                chat_info = session.query(ChatInfo).filter(
-                    ChatInfo.chat_id == chat_id
-                ).first()
+                chat_info = (
+                    session.query(ChatInfo).filter(ChatInfo.chat_id == chat_id).first()
+                )
 
                 if chat_info:
                     chat_info.is_active = is_active
@@ -78,7 +84,8 @@ class ChatInfoManager:
 
                     session.commit()
                     logger.info(
-                        f"Обновлен статус чата {chat_id}: активен = {is_active}")
+                        f"Обновлен статус чата {chat_id}: активен = {is_active}"
+                    )
                     return True
                 else:
                     logger.warning(f"Чат {chat_id} не найден для обновления статуса")
@@ -94,9 +101,7 @@ class ChatInfoManager:
         """
         try:
             with self.session_maker() as session:
-                chats = session.query(ChatInfo).filter(
-                    ChatInfo.is_active == True
-                ).all()
+                chats = session.query(ChatInfo).filter(ChatInfo.is_active == True).all()
                 return chats
         except Exception as e:
             logger.error(f"Ошибка при получении активных чатов: {e}")
@@ -108,9 +113,9 @@ class ChatInfoManager:
         """
         try:
             with self.session_maker() as session:
-                chat_info = session.query(ChatInfo).filter(
-                    ChatInfo.chat_id == chat_id
-                ).first()
+                chat_info = (
+                    session.query(ChatInfo).filter(ChatInfo.chat_id == chat_id).first()
+                )
                 return chat_info
         except Exception as e:
             logger.error(f"Ошибка при получении информации о чате {chat_id}: {e}")
@@ -143,16 +148,19 @@ class ChatInfoManager:
                     if chat_data.type in ["group", "supergroup"]:
                         try:
                             members_count = await bot.get_chat_member_count(
-                                chat_info.chat_id)
+                                chat_info.chat_id
+                            )
                         except (TelegramBadRequest, TelegramForbiddenError) as e:
                             logger.warning(
-                                f"Не удалось получить количество участников для чата {chat_info.chat_id}: {e}")
+                                f"Не удалось получить количество участников для чата {chat_info.chat_id}: {e}"
+                            )
                             members_count = "Недоступно"
 
                     # Получаем статус бота в чате
                     try:
-                        bot_member = await bot.get_chat_member(chat_info.chat_id,
-                                                               bot.id)
+                        bot_member = await bot.get_chat_member(
+                            chat_info.chat_id, bot.id
+                        )
                         bot_status = bot_member.status
                         is_active = bot_status in ["member", "administrator"]
                     except (TelegramBadRequest, TelegramForbiddenError) as e:
@@ -164,9 +172,9 @@ class ChatInfoManager:
                     updated_data = {
                         "chat_id": chat_info.chat_id,
                         "chat_type": chat_data.type,
-                        "chat_title": getattr(chat_data, 'title', 'Приватный чат'),
-                        "chat_username": getattr(chat_data, 'username', None),
-                        "chat_description": getattr(chat_data, 'description', None),
+                        "chat_title": getattr(chat_data, "title", "Приватный чат"),
+                        "chat_username": getattr(chat_data, "username", None),
+                        "chat_description": getattr(chat_data, "description", None),
                         "members_count": str(members_count) if members_count else None,
                         # Сохраняем оригинальную информацию о том, кто добавил бота
                         "added_by_user_id": chat_info.added_by_user_id,
@@ -176,7 +184,7 @@ class ChatInfoManager:
                         "added_at": chat_info.added_at,  # Не изменяем дату добавления
                         "updated_at": datetime.now(),
                         "bot_status": bot_status,
-                        "is_active": is_active
+                        "is_active": is_active,
                     }
 
                     # Сохраняем обновленную информацию
@@ -189,11 +197,13 @@ class ChatInfoManager:
                         else:
                             stats["deactivated"] += 1
                             logger.info(
-                                f"Чат {chat_info.chat_id} помечен как неактивный")
+                                f"Чат {chat_info.chat_id} помечен как неактивный"
+                            )
                     else:
                         stats["errors"] += 1
                         logger.error(
-                            f"Не удалось сохранить данные для чата {chat_info.chat_id}")
+                            f"Не удалось сохранить данные для чата {chat_info.chat_id}"
+                        )
 
                 except (TelegramBadRequest, TelegramForbiddenError) as e:
                     # Бот удален из чата или нет доступа
@@ -206,10 +216,10 @@ class ChatInfoManager:
                     stats["errors"] += 1
 
             logger.info(
-                f"Обновление завершено: обновлено {stats['updated']}, деактивировано {stats['deactivated']}, ошибок {stats['errors']}")
+                f"Обновление завершено: обновлено {stats['updated']}, деактивировано {stats['deactivated']}, ошибок {stats['errors']}"
+            )
             return stats
 
         except Exception as e:
             logger.error(f"Критическая ошибка при обновлении чатов: {e}")
             return stats
-

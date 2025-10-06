@@ -25,26 +25,27 @@ def has_premium_access(user_id: int) -> bool:
 
     return subscription_manager.has_active_subscription(user_id)
 
+
 def split_long_message(text: str, max_length: int = 4000) -> list:
     """Разбить длинное сообщение на части"""
     if len(text) <= max_length:
         return [text]
 
     messages = []
-    lines = text.split('\n')
+    lines = text.split("\n")
     current_message = ""
 
     for line in lines:
-        if len(current_message + line + '\n') <= max_length:
-            current_message += line + '\n'
+        if len(current_message + line + "\n") <= max_length:
+            current_message += line + "\n"
         else:
             if current_message:
                 messages.append(current_message.rstrip())
-                current_message = line + '\n'
+                current_message = line + "\n"
             else:
                 # Если одна строка больше лимита, принудительно обрезаем
                 messages.append(line[:max_length])
-                current_message = line[max_length:] + '\n'
+                current_message = line[max_length:] + "\n"
 
     if current_message:
         messages.append(current_message.rstrip())
