@@ -9,6 +9,7 @@ from app.controllers import admin_notifier, chat_info_manager
 from app.controllers import bot_stats, subscription_manager
 from app.controllers import feedback_manager
 from app.models.chat_info import ChatInfo
+from app.services import scheduler_service
 from app.utils.decorators import admin_only
 from app.utils.tools import escape_markdown, is_admin, split_long_message
 
@@ -392,3 +393,61 @@ async def get_all_chats_info():
     except Exception as e:
         logging.error(f"Ошибка получения списка чатов: {e}")
         return []
+
+
+@admin_router.message(Command("scheduler_status"))
+@admin_only
+async def scheduler_status_command(message: Message):
+    """Статус планировщика задач"""
+    if scheduler_service.scheduler.running:
+        jobs = scheduler_service.scheduler.get_jobs()
+        text = f"✅ **Планировщик активен**\n\n"
+        text += f"📋 Активных задач: {len(jobs)}\n\n"
+
+        for job in jobs:
+            next_run = (
+                job.next_run_time.strftime("%H:%M:%S %d.%m.%Y")
+                if job.next_run_time
+                else "—"
+            )
+            text += f"🔄 {job.id}\n📅 Следующий запуск: {next_run}\n\n"
+    else:
+        text = "❌ **Планировщик не активен**"
+
+    await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
+
+
+@admin_router.message(Command("chat_analytics"))
+@admin_only
+async def chat_analytics_command(message: Message):
+    """Аналитика по чатам"""
+    try:
+        args = message.text.split()
+        chat_id = int(args[1]) if len(args) > 1 else message.chat.id
+        days = int(args[2]) if len(args) > 2 else 7
+
+        analytics = await chat_info_manager.get_chat_analytics(chat_id, days)
+
+        if analytics and "error" not in analytics:
+            text = f"📊 **Аналитика чата {chat_id}**\n\n"
+            text += f"📅 Период: {days} дней\n"
+            text += f"📸 Снапшотов: {analytics['snapshots_count']}\n"
+
+            if analytics["snapshots_count"] > 0:
+                text += (
+                    f"📝 Текущее название: {analytics.get('current_title', 'Н/Д')}\n"
+                )
+                text += f"👥 Участников: {analytics.get('current_members', 'Н/Д')}\n"
+                text += f"🤖 Статус бота: {analytics.get('current_status', 'Н/Д')}\n"
+                text += f"✅ Активен: {'Да' if analytics.get('is_active') else 'Нет'}\n"
+        else:
+            text = "❌ Аналитика недоступна"
+
+        await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
+
+    except (ValueError, IndexError):
+        await message.answer(
+            "❌ Использование: /chat_analytics [chat_id] [days]\nПример: /chat_analytics -123456789 7"
+        )
+    except Exception as e:
+        await message.answer(f"❌ Ошибка: {str(e)}")

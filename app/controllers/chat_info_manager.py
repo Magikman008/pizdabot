@@ -3,13 +3,14 @@
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 from sqlalchemy.exc import IntegrityError
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 from app.bot import bot
 from app.models.chat_info import ChatInfo
+from app.models.chat_info_history import ChatInfoHistory
 
 logger = logging.getLogger(__name__)
 
@@ -223,3 +224,96 @@ class ChatInfoManager:
         except Exception as e:
             logger.error(f"Критическая ошибка при обновлении чатов: {e}")
             return stats
+
+    async def save_hourly_snapshot(self) -> bool:
+        """
+        Сохраняет снапшот текущего состояния всех чатов
+        для дальнейшего анализа
+        """
+        try:
+            with self.session_maker() as session:
+                # Получаем все активные чаты
+                active_chats = (
+                    session.query(ChatInfo).filter(ChatInfo.is_active == True).all()
+                )
+
+                snapshot_time = datetime.now()
+                snapshots = []
+
+                for chat in active_chats:
+                    snapshot = ChatInfoHistory(
+                        snapshot_date=snapshot_time,
+                        chat_id=chat.chat_id,
+                        chat_type=chat.chat_type,
+                        chat_title=chat.chat_title,
+                        chat_username=chat.chat_username,
+                        chat_description=chat.chat_description,
+                        members_count=chat.members_count,
+                        bot_status=chat.bot_status,
+                        is_active=chat.is_active
+                    )
+                    snapshots.append(snapshot)
+
+                session.add_all(snapshots)
+                session.commit()
+
+                logger.info(f"Сохранен снапшот для {len(snapshots)} чатов")
+                return True
+
+        except Exception as e:
+            logger.error(f"Ошибка сохранения снапшота: {e}")
+            return False
+
+    async def get_chat_analytics(self, chat_id: int, days: int = 7) -> dict:
+        """
+        Получить базовую аналитику по чату за указанный период
+        """
+        try:
+            with self.session_maker() as session:
+                from datetime import timedelta
+
+                from_date = datetime.now() - timedelta(days=days)
+
+                # Получаем все снапшоты за период
+                history = (
+                    session.query(ChatInfoHistory)
+                    .filter(
+                        ChatInfoHistory.chat_id == chat_id,
+                        ChatInfoHistory.snapshot_date >= from_date,
+                    )
+                    .order_by(ChatInfoHistory.snapshot_date.asc())
+                    .all()
+                )
+
+                if not history:
+                    return {
+                        "chat_id": chat_id,
+                        "period_days": days,
+                        "snapshots_count": 0,
+                        "status": "no_data",
+                    }
+
+                # Базовая аналитика
+                first_snapshot = history[0]
+                last_snapshot = history[-1]
+
+                return {
+                    "chat_id": chat_id,
+                    "period_days": days,
+                    "snapshots_count": len(history),
+                    "first_seen": first_snapshot.snapshot_date.isoformat(),
+                    "last_seen": last_snapshot.snapshot_date.isoformat(),
+                    "current_title": last_snapshot.chat_title,
+                    "current_members": last_snapshot.members_count,
+                    "current_status": last_snapshot.bot_status,
+                    "is_active": last_snapshot.is_active,
+                    "title_changed": first_snapshot.chat_title
+                    != last_snapshot.chat_title,
+                    "status_stable": all(
+                        s.bot_status == last_snapshot.bot_status for s in history
+                    ),
+                }
+
+        except Exception as e:
+            logger.error(f"Ошибка получения аналитики: {e}")
+            return {"error": str(e)}
