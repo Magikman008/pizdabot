@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 
+import logger
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -14,7 +15,7 @@ from app.utils.decorators import admin_only
 from app.utils.tools import escape_markdown, is_admin, split_long_message
 
 admin_router = Router()
-
+logger = logging.getLogger(__name__)
 
 @admin_router.message(Command("admin_stats"))
 @admin_only
@@ -451,3 +452,107 @@ async def chat_analytics_command(message: Message):
         )
     except Exception as e:
         await message.answer(f"❌ Ошибка: {str(e)}")
+
+
+@admin_router.message(Command("growth_charts"))
+@admin_only
+async def growth_charts_command(message: Message):
+    """Графики роста количества групп и участников"""
+    try:
+        args = message.text.split()
+        days = int(args[1]) if len(args) > 1 else 30
+
+        if days > 365:
+            await message.answer("❌ Максимальный период: 365 дней")
+            return
+
+        # Получаем данные для графиков
+        analytics = await chat_info_manager.get_growth_analytics(days)
+
+        if 'error' in analytics:
+            await message.answer(f"❌ {analytics['error']}")
+            return
+
+        if analytics['snapshots_count'] == 0:
+            await message.answer("📭 Нет данных для построения графиков")
+            return
+
+        # Отправляем статус
+        status_msg = await message.reply(
+            f"📊 Строим графики за {days} дней...\n"
+            f"📸 Снапшотов: {analytics['snapshots_count']}"
+        )
+
+        from app.utils.chart_creator import create_growth_chart, create_comparison_chart
+
+        # Подготавливаем данные
+        groups_data = []
+        members_data = []
+
+        for point in analytics['timeline_data']:
+            groups_data.append({
+                'date': point['date'],
+                'count': point['groups_count']
+            })
+            members_data.append({
+                'date': point['date'],
+                'count': point['total_members']
+            })
+
+        # Создаем и отправляем график групп
+        try:
+            groups_chart = await create_growth_chart({
+                'title': f'Рост количества групп за {days} дней',
+                'data': groups_data,
+                'y_label': 'Количество групп',
+                'color': '#2196F3'
+            })
+
+            await message.answer_photo(
+                groups_chart,
+                caption="📊 График роста количества групп"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка создания графика групп: {e}")
+            await message.answer(f"❌ Ошибка создания графика групп: {str(e)}")
+
+        # Создаем и отправляем график участников
+        try:
+            members_chart = await create_growth_chart({
+                'title': f'Рост количества участников за {days} дней',
+                'data': members_data,
+                'y_label': 'Количество участников',
+                'color': '#4CAF50'
+            })
+
+            await message.answer_photo(
+                members_chart,
+                caption="👥 График роста количества участников"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка создания графика участников: {e}")
+            await message.answer(f"❌ Ошибка создания графика участников: {str(e)}")
+
+
+        # Итоговая статистика
+        final_stats = analytics['timeline_data'][-1] if analytics[
+            'timeline_data'] else {}
+
+        summary = f"""📈 Аналитика за {days} дней
+
+📊 Текущие показатели:
+👥 Групп: {final_stats.get('groups_count', 0)}
+🧑‍🤝‍🧑 Участников: {final_stats.get('total_members', 0):,}
+💬 Приватных чатов: {final_stats.get('private_chats', 0)}
+
+📅 {analytics['date_range']['from']} — {analytics['date_range']['to']}"""
+
+        await status_msg.edit_text(summary)
+
+    except ValueError:
+        await message.answer(
+            "❌ Использование: /growth_charts [дни]\nПример: /growth_charts 30")
+    except Exception as e:
+        logger.error(f"Ошибка команды growth_charts: {e}")
+        await message.answer(f"❌ Ошибка: {str(e)}")
+
