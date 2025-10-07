@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 
-import logger
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -15,7 +14,6 @@ from app.utils.decorators import admin_only
 from app.utils.tools import escape_markdown, is_admin, split_long_message
 
 admin_router = Router()
-logger = logging.getLogger(__name__)
 
 
 @admin_router.message(Command("admin_stats"))
@@ -523,7 +521,6 @@ async def growth_charts_command(message: Message):
                 groups_chart, caption="📊 График роста количества групп"
             )
         except Exception as e:
-            logger.error(f"Ошибка создания графика групп: {e}")
             await message.answer(f"❌ Ошибка создания графика групп: {str(e)}")
 
         # Создаем и отправляем график участников
@@ -541,7 +538,6 @@ async def growth_charts_command(message: Message):
                 members_chart, caption="👥 График роста количества участников"
             )
         except Exception as e:
-            logger.error(f"Ошибка создания графика участников: {e}")
             await message.answer(f"❌ Ошибка создания графика участников: {str(e)}")
 
         # Итоговая статистика
@@ -565,5 +561,4 @@ async def growth_charts_command(message: Message):
             "❌ Использование: /growth_charts [дни]\nПример: /growth_charts 30"
         )
     except Exception as e:
-        logger.error(f"Ошибка команды growth_charts: {e}")
         await message.answer(f"❌ Ошибка: {str(e)}")
