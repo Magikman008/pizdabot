@@ -250,7 +250,7 @@ class ChatInfoManager:
                         chat_description=chat.chat_description,
                         members_count=chat.members_count,
                         bot_status=chat.bot_status,
-                        is_active=chat.is_active
+                        is_active=chat.is_active,
                     )
                     snapshots.append(snapshot)
 
@@ -325,16 +325,22 @@ class ChatInfoManager:
         try:
             with self.session_maker() as session:
                 from datetime import timedelta
+
                 from_date = datetime.now() - timedelta(days=days)
 
                 # Получаем все снапшоты за период, отсортированные по времени
-                snapshots = session.query(ChatInfoHistory).filter(
-                    ChatInfoHistory.snapshot_date >= from_date,
-                    ChatInfoHistory.is_active == True  # Только активные чаты
-                ).order_by(ChatInfoHistory.snapshot_date.asc()).all()
+                snapshots = (
+                    session.query(ChatInfoHistory)
+                    .filter(
+                        ChatInfoHistory.snapshot_date >= from_date,
+                        ChatInfoHistory.is_active == True,  # Только активные чаты
+                    )
+                    .order_by(ChatInfoHistory.snapshot_date.asc())
+                    .all()
+                )
 
                 if not snapshots:
-                    return {'error': 'Нет данных за указанный период'}
+                    return {"error": "Нет данных за указанный период"}
 
                 # Группируем по snapshot_date
                 snapshots_by_date = {}
@@ -351,43 +357,52 @@ class ChatInfoManager:
                     snapshot_group = snapshots_by_date[date_key]
 
                     # Считаем количество групп (group + supergroup)
-                    groups_count = len([
-                        s for s in snapshot_group
-                        if s.chat_type in ['group', 'supergroup']
-                    ])
+                    groups_count = len(
+                        [
+                            s
+                            for s in snapshot_group
+                            if s.chat_type in ["group", "supergroup"]
+                        ]
+                    )
 
                     # Считаем общее количество участников в группах
                     total_members = 0
                     for snapshot in snapshot_group:
-                        if (snapshot.chat_type in ['group', 'supergroup'] and
-                                snapshot.members_count and
-                                snapshot.members_count.isdigit()):
+                        if (
+                            snapshot.chat_type in ["group", "supergroup"]
+                            and snapshot.members_count
+                            and snapshot.members_count.isdigit()
+                        ):
                             total_members += int(snapshot.members_count)
 
                     # Форматируем дату для отображения
                     snapshot_date = datetime.fromisoformat(
-                        date_key.replace('Z', '+00:00'))
-                    formatted_date = snapshot_date.strftime('%Y-%m-%d %H:%M')
+                        date_key.replace("Z", "+00:00")
+                    )
+                    formatted_date = snapshot_date.strftime("%Y-%m-%d %H:%M")
 
-                    timeline_data.append({
-                        'date': formatted_date,
-                        'timestamp': snapshot_date.timestamp(),
-                        'groups_count': groups_count,
-                        'total_members': total_members,
-                        'private_chats': len(
-                            [s for s in snapshot_group if s.chat_type == 'private'])
-                    })
+                    timeline_data.append(
+                        {
+                            "date": formatted_date,
+                            "timestamp": snapshot_date.timestamp(),
+                            "groups_count": groups_count,
+                            "total_members": total_members,
+                            "private_chats": len(
+                                [s for s in snapshot_group if s.chat_type == "private"]
+                            ),
+                        }
+                    )
 
                 return {
-                    'period_days': days,
-                    'snapshots_count': len(timeline_data),
-                    'timeline_data': timeline_data,
-                    'date_range': {
-                        'from': timeline_data[0]['date'] if timeline_data else None,
-                        'to': timeline_data[-1]['date'] if timeline_data else None
-                    }
+                    "period_days": days,
+                    "snapshots_count": len(timeline_data),
+                    "timeline_data": timeline_data,
+                    "date_range": {
+                        "from": timeline_data[0]["date"] if timeline_data else None,
+                        "to": timeline_data[-1]["date"] if timeline_data else None,
+                    },
                 }
 
         except Exception as e:
             logger.error(f"Ошибка получения аналитики роста: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}

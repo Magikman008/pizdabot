@@ -17,6 +17,7 @@ from app.utils.tools import escape_markdown, is_admin, split_long_message
 admin_router = Router()
 logger = logging.getLogger(__name__)
 
+
 @admin_router.message(Command("admin_stats"))
 @admin_only
 async def admin_stats(message: Message):
@@ -469,11 +470,11 @@ async def growth_charts_command(message: Message):
         # Получаем данные для графиков
         analytics = await chat_info_manager.get_growth_analytics(days)
 
-        if 'error' in analytics:
+        if "error" in analytics:
             await message.answer(f"❌ {analytics['error']}")
             return
 
-        if analytics['snapshots_count'] == 0:
+        if analytics["snapshots_count"] == 0:
             await message.answer("📭 Нет данных для построения графиков")
             return
 
@@ -489,28 +490,25 @@ async def growth_charts_command(message: Message):
         groups_data = []
         members_data = []
 
-        for point in analytics['timeline_data']:
-            groups_data.append({
-                'date': point['date'],
-                'count': point['groups_count']
-            })
-            members_data.append({
-                'date': point['date'],
-                'count': point['total_members']
-            })
+        for point in analytics["timeline_data"]:
+            groups_data.append({"date": point["date"], "count": point["groups_count"]})
+            members_data.append(
+                {"date": point["date"], "count": point["total_members"]}
+            )
 
         # Создаем и отправляем график групп
         try:
-            groups_chart = await create_growth_chart({
-                'title': f'Рост количества групп за {days} дней',
-                'data': groups_data,
-                'y_label': 'Количество групп',
-                'color': '#2196F3'
-            })
+            groups_chart = await create_growth_chart(
+                {
+                    "title": f"Рост количества групп за {days} дней",
+                    "data": groups_data,
+                    "y_label": "Количество групп",
+                    "color": "#2196F3",
+                }
+            )
 
             await message.answer_photo(
-                groups_chart,
-                caption="📊 График роста количества групп"
+                groups_chart, caption="📊 График роста количества групп"
             )
         except Exception as e:
             logger.error(f"Ошибка создания графика групп: {e}")
@@ -518,25 +516,26 @@ async def growth_charts_command(message: Message):
 
         # Создаем и отправляем график участников
         try:
-            members_chart = await create_growth_chart({
-                'title': f'Рост количества участников за {days} дней',
-                'data': members_data,
-                'y_label': 'Количество участников',
-                'color': '#4CAF50'
-            })
+            members_chart = await create_growth_chart(
+                {
+                    "title": f"Рост количества участников за {days} дней",
+                    "data": members_data,
+                    "y_label": "Количество участников",
+                    "color": "#4CAF50",
+                }
+            )
 
             await message.answer_photo(
-                members_chart,
-                caption="👥 График роста количества участников"
+                members_chart, caption="👥 График роста количества участников"
             )
         except Exception as e:
             logger.error(f"Ошибка создания графика участников: {e}")
             await message.answer(f"❌ Ошибка создания графика участников: {str(e)}")
 
-
         # Итоговая статистика
-        final_stats = analytics['timeline_data'][-1] if analytics[
-            'timeline_data'] else {}
+        final_stats = (
+            analytics["timeline_data"][-1] if analytics["timeline_data"] else {}
+        )
 
         summary = f"""📈 Аналитика за {days} дней
 
@@ -551,8 +550,8 @@ async def growth_charts_command(message: Message):
 
     except ValueError:
         await message.answer(
-            "❌ Использование: /growth_charts [дни]\nПример: /growth_charts 30")
+            "❌ Использование: /growth_charts [дни]\nПример: /growth_charts 30"
+        )
     except Exception as e:
         logger.error(f"Ошибка команды growth_charts: {e}")
         await message.answer(f"❌ Ошибка: {str(e)}")
-

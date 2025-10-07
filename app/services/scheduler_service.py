@@ -18,7 +18,8 @@ async def minutely_chat_info_update():
         # 1. Обновляем информацию о всех чатах
         stats = await chat_info_manager.update_all_chats_info()
         logger.info(
-            f"Обновлено {stats['updated']} чатов; деактивировано {stats['deactivated']}")
+            f"Обновлено {stats['updated']} чатов; деактивировано {stats['deactivated']}"
+        )
 
         # 2. Сохраняем снапшот в chat_info_history
         success = await chat_info_manager.save_hourly_snapshot()
@@ -36,20 +37,12 @@ async def minutely_chat_info_update():
 
 class SchedulerService:
     def __init__(self):
-        executors = {
-            'default': AsyncIOExecutor()
-        }
+        executors = {"default": AsyncIOExecutor()}
 
-        job_defaults = {
-            'coalesce': True,
-            'max_instances': 1,
-            'misfire_grace_time': 30
-        }
+        job_defaults = {"coalesce": True, "max_instances": 1, "misfire_grace_time": 30}
 
         self.scheduler = AsyncIOScheduler(
-            executors=executors,
-            job_defaults=job_defaults,
-            timezone='UTC'
+            executors=executors, job_defaults=job_defaults, timezone="UTC"
         )
 
     async def start(self):
@@ -60,10 +53,10 @@ class SchedulerService:
             # ДЛЯ ТЕСТИРОВАНИЯ: каждую минуту
             self.scheduler.add_job(
                 func=minutely_chat_info_update,  # Функция, а не метод
-                trigger='interval',
+                trigger="interval",
                 minutes=1,
-                id='minutely_chat_info_update',
-                replace_existing=True
+                id="minutely_chat_info_update",
+                replace_existing=True,
             )
 
             logger.info("Планировщик запущен успешно")
