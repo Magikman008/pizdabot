@@ -45,12 +45,10 @@ class SchedulerService:
         job_defaults = {
             "coalesce": True,
             "max_instances": 1,
-            "misfire_grace_time": 300  # Грейс-тайм 5 минут
+            "misfire_grace_time": 300,  # Грейс-тайм 5 минут
         }
         self.scheduler = AsyncIOScheduler(
-            executors=executors,
-            job_defaults=job_defaults,
-            timezone="UTC"
+            executors=executors, job_defaults=job_defaults, timezone="UTC"
         )
 
     async def start(self):
@@ -62,7 +60,7 @@ class SchedulerService:
             self.scheduler.add_job(
                 func=hourly_chat_info_update,
                 trigger="cron",
-                minute=0,              # запуск в XX:00
+                minute=0,  # запуск в XX:00
                 id="hourly_chat_info_update",
                 replace_existing=True,
             )
@@ -71,8 +69,11 @@ class SchedulerService:
             jobs = self.scheduler.get_jobs()
             logger.info(f"🚀 Планировщик запущен успешно с {len(jobs)} задачами:")
             for job in jobs:
-                next_run = job.next_run_time.strftime(
-                    "%Y-%m-%d %H:%M:%S UTC") if job.next_run_time else "Не запланировано"
+                next_run = (
+                    job.next_run_time.strftime("%Y-%m-%d %H:%M:%S UTC")
+                    if job.next_run_time
+                    else "Не запланировано"
+                )
                 logger.info(f"  📋 {job.id} — следующий запуск: {next_run}")
 
         except Exception as e:
@@ -91,18 +92,18 @@ class SchedulerService:
 
         jobs_info = []
         for job in self.scheduler.get_jobs():
-            jobs_info.append({
-                "id": job.id,
-                "name": job.name or job.id,
-                "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
-                "trigger": str(job.trigger),
-            })
+            jobs_info.append(
+                {
+                    "id": job.id,
+                    "name": job.name or job.id,
+                    "next_run": (
+                        job.next_run_time.isoformat() if job.next_run_time else None
+                    ),
+                    "trigger": str(job.trigger),
+                }
+            )
 
-        return {
-            "status": "running",
-            "total_jobs": len(jobs_info),
-            "jobs": jobs_info
-        }
+        return {"status": "running", "total_jobs": len(jobs_info), "jobs": jobs_info}
 
     async def run_job_manually(self, job_id: str) -> bool:
         """Ручной запуск конкретной задачи."""
@@ -110,7 +111,9 @@ class SchedulerService:
             job = self.scheduler.get_job(job_id)
             if job:
                 job.modify(next_run_time=datetime.now())
-                logger.info(f"🔧 Задача {job_id} запланирована к немедленному выполнению")
+                logger.info(
+                    f"🔧 Задача {job_id} запланирована к немедленному выполнению"
+                )
                 return True
             else:
                 logger.warning(f"⚠️ Задача {job_id} не найдена")
