@@ -48,7 +48,7 @@ async def cmd_help(message: Message):
     if user_has_premium:
         help_text += "• ✅ *Премиум-статус активен!*\n"
     else:
-        help_text += "• ❌ _Премиум-статус неактивен_\n"
+        help_text += "• ❌ *Премиум-статус неактивен*\n"
     help_text += "\n"
 
     # === ПОЛЬЗОВАТЕЛЬСКИЕ ТРИГГЕРЫ ===
