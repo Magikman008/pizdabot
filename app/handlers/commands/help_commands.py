@@ -118,7 +118,7 @@ async def cmd_start(message: Message):
         message.from_user.username or message.from_user.first_name or "пользователь"
     )
     user_id = message.from_user.id
-    user_is_admin = is_admin(message.from_user.username)
+    user_is_admin = is_admin(message)
     user_has_premium = has_premium_access(user_id)
     escaped_username = escape_markdown(username)
 
