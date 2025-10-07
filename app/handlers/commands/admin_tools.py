@@ -212,7 +212,7 @@ async def cmd_admin_feedback(message: Message):
     if not feedbacks:
         text = (
             "📭 *Обращений пока нет*\n\n"
-            "Пользователи еще не отправляли обратную связь\."
+            "Пользователи еще не отправляли обратную связь."
         )
         await message.answer(escape_markdown(text), parse_mode="MarkdownV2")
         return
@@ -330,7 +330,7 @@ async def update_all_chats_command(message: Message):
 @admin_router.message(Command("show_chats"))
 @admin_only
 async def show_chats_command(message: Message):
-    """Команда для просмотра всех чатов"""
+    """Команда для просмотра всех чатов, корректно обрабатывает любые null значения из БД"""
 
     try:
         chats_info = await get_all_chats_info()
@@ -339,59 +339,61 @@ async def show_chats_command(message: Message):
             await message.reply("📭 Чатов не найдено")
             return
 
-        # Формируем сообщение с информацией о чатах
         response = "📋 **Все чаты бота:**\n\n"
 
         for i, chat in enumerate(chats_info, 1):
-            # Форматируем дату добавления
+            # Дефолтные значения для возможных None
+            title = chat.chat_title or "—"
+            title = (title[:30] + "...") if len(title) > 30 else title
+
+            description = chat.chat_description or ""
+            if description:
+                description = (description[:50] + "...") if len(description) > 50 else description
+            else:
+                description = "—"
+
             added_date = (
-                chat.added_at.strftime("%d.%m.%Y %H:%M") if chat.added_at else "—"
+                chat.added_at.strftime("%d.%m.%Y %H:%M")
+                if getattr(chat, "added_at", None)
+                else "—"
             )
 
-            # Определяем статус бота
-            status_emoji = "✅" if chat.is_active else "❌"
-            status_text = "активен" if chat.is_active else "неактивен"
+            added_by = chat.added_by_username or "неизвестно"
 
-            # Форматируем тип чата
+            members = chat.members_count if chat.members_count is not None else "—"
+
+            is_active = bool(getattr(chat, "is_active", False))
+            status_emoji = "✅" if is_active else "❌"
+            status_text = "активен" if is_active else "неактивен"
+
+            chat_type_raw = chat.chat_type or ""
             chat_type_map = {
                 "private": "👤 Личный",
                 "group": "👥 Группа",
                 "supergroup": "👥 Супергруппа",
                 "channel": "📢 Канал",
             }
-            chat_type_str = chat_type_map.get(chat.chat_type, chat.chat_type)
+            chat_type_str = chat_type_map.get(chat_type_raw, chat_type_raw or "—")
 
-            # Обрезаем длинные названия и описания
-            title = (
-                chat.chat_title[:30] + "..."
-                if len(chat.chat_title) > 30
-                else chat.chat_title
-            )
-            description = (
-                (chat.chat_description[:50] + "...")
-                if chat.chat_description and len(chat.chat_description) > 50
-                else (chat.chat_description or "—")
+            response += (
+                f"**{i}. {title}**\n"
+                f"{chat_type_str} | {members} чел.\n"
+                f"📅 Добавлен: {added_date}\n"
+                f"👤 Кем: @{added_by}\n"
+                f"📝 Описание: {description}\n"
+                f"🤖 Бот: {status_emoji} {status_text}\n\n"
             )
 
-            response += f"""**{i}. {title}**
-{chat_type_str} | {chat.members_count or "—"} чел.
-📅 Добавлен: {added_date}
-👤 Кем: @{chat.added_by_username or "неизвестно"}
-📝 Описание: {description}
-🤖 Бот: {status_emoji} {status_text}
-
-"""
-
-        # Telegram ограничивает размер сообщения, разбиваем если нужно
+        # Разбивка длинного сообщения по лимиту Telegram
         if len(response) > 4000:
-            messages = split_long_message(response, 4000)
-            for msg in messages:
-                await message.reply(msg, parse_mode="Markdown")
+            parts = split_long_message(response, 4000)
+            for part in parts:
+                await message.reply(part, parse_mode="Markdown")
         else:
             await message.reply(response, parse_mode="Markdown")
 
     except Exception as e:
-        await message.reply(f"❌ Ошибка при получении списка чатов: {str(e)}")
+        await message.reply(f"❌ Ошибка при получении списка чатов: {e}")
         logging.error(f"Ошибка команды show_chats: {e}")
 
 
