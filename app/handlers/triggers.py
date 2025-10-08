@@ -4,10 +4,16 @@ from aiogram.types import Message
 import re
 
 from app.controllers import user_trigger_manager, chat_settings_manager, bot_stats
+from app.controllers.nps_manager import NPSManager
+from app.controllers.trigger_counter import trigger_counter
+from app.db import SessionLocal
+from app.handlers.commands.nps_commands import send_nps_survey
 from app.states import FeedbackStates
 from triggers import russian_swear_triggers
 
 base_trigger_router = Router()
+NPS_TRIGGER_THRESHOLD = 30
+NPS_TRIGGER_COOLDOWN = 2880
 
 
 def is_caps_message(text):
@@ -23,6 +29,30 @@ def is_caps_message(text):
 
     # Проверяем, что все буквы в верхнем регистре
     return clean_text.isupper()
+
+
+async def check_nps_threshold_and_send_survey(message):
+    """
+    Проверить порог триггеров и cooldown по времени, затем отправить опрос.
+    """
+    chat_id = message.chat.id
+
+    # 3. Проверяем cooldown по времени (48 часов с момента последнего опроса)
+    nps_manager = NPSManager(SessionLocal)
+    if not nps_manager.should_show_nps_for_chat(chat_id, minutes_cooldown=NPS_TRIGGER_COOLDOWN):
+        return  # Ещё рано
+
+    # 1. Увеличиваем общий счетчик триггеров
+    current_count = trigger_counter.increment_chat_trigger_count(chat_id)
+
+    # 2. Проверяем порог накопления
+    if current_count < NPS_TRIGGER_THRESHOLD:
+        return  # Ещё не накопилось
+
+    # 4. Условия выполнены! Сбрасываем счётчик и отправляем опрос
+    trigger_counter.reset_chat_trigger_count(chat_id)
+    await send_nps_survey(chat_id, current_count)
+
 
 
 @base_trigger_router.message(F.text, ~F.text.startswith(("/")))
@@ -57,9 +87,9 @@ async def handle_triggers(message: Message, state: FSMContext):
     # СНАЧАЛА проверяем пользовательские триггеры (они имеют приоритет)
     user_response = user_trigger_manager.get_response(message.chat.id, text)
     if user_response:
-        # НОВОЕ: если исходное сообщение КАПСЛОКОМ, отвечаем КАПСЛОКОМ
         response = user_response.upper() if is_caps else user_response
         await message.answer(response)
+        await check_nps_threshold_and_send_survey(message)
         return
 
     # Если пользовательские триггеры не сработали, проверяем глобальные
@@ -82,6 +112,7 @@ async def handle_triggers(message: Message, state: FSMContext):
                 # НОВОЕ: если исходное сообщение КАПСЛОКОМ, отвечаем КАПСЛОКОМ
                 final_response = response.upper() if is_caps else response
                 await message.answer(final_response)
+                await check_nps_threshold_and_send_survey(message)
                 # Записываем статистику
                 bot_stats.add_roast(
                     user_id=message.from_user.id,
@@ -89,3 +120,5 @@ async def handle_triggers(message: Message, state: FSMContext):
                     trigger=trigger,
                 )
                 return  # Отвечаем только на первый найденный триггер
+
+
