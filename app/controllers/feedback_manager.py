@@ -151,6 +151,7 @@ class FeedbackManager:
                     .update({"is_read": True}, synchronize_session=False)
                 )
 
+                session.commit()
                 print(f"👁️ Отмечено как прочитанные: {updated_count} обращений")
                 return updated_count
 
