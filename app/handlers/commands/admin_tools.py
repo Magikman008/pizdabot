@@ -97,17 +97,17 @@ async def cmd_feedback_unread(message: Message):
 
     for fb in feedbacks:
         user_display = fb.username or fb.first_name or f"User {fb.user_id}"
-        if fb.get("username"):
+        if fb.username:
             user_display = f"@{user_display}"
 
-        message_preview = fb["message"]
+        message_preview = fb.message
         if len(message_preview) > 150:
             message_preview = message_preview[:150] + "..."
 
-        created_at = fb["created_at"][:16].replace("T", " ")
+        created_at = fb.created_at.strftime("%d.%m.%y")
 
         text += (
-            f"🆔 **#{fb['id']}** | {user_display}\n"
+            f"🆔 **#{fb.id}** | {user_display}\n"
             f"📅 {created_at}\n"
             f"💬 {message_preview}\n\n"
         )
