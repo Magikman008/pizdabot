@@ -283,7 +283,7 @@ async def successful_payment_handler(message: Message):
             chat_id=chat_id,
             price=payment.total_amount,
             transaction_id=payment.telegram_payment_charge_id,
-            type_name=SubscriptionType.YOOKASSA.value,
+            type_name=SubscriptionType.TELEGRAM_STARS.value,
         )
 
         if success:

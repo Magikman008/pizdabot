@@ -80,7 +80,7 @@ class SubscriptionManager:
             chat_id: int,
             price: float,
             transaction_id: str = None,
-            type_name: str = None,  # Это строка, например "yookassa"
+            type_name: str = None,
             yookassa_payment_id: str = None,
     ) -> Tuple[bool, str]:
         """Активировать или продлить подписку"""
@@ -110,16 +110,15 @@ class SubscriptionManager:
 
             # Сохраняем транзакцию
             if transaction_id:
-                # ✅ ИСПРАВЛЕНИЕ: преобразуем строку в enum
                 subscription_type = SubscriptionType(type_name) if type_name else None
 
                 txn = Transaction(
                     subscription=sub,
                     transaction_id=transaction_id,
-                    amount_stars=price,
+                    amount=price,  # ✅ Универсальное поле
                     timestamp=now,
                     who_bought_id=user_id,
-                    type=subscription_type,  # ✅ Передаём enum, а не строку
+                    type=subscription_type,
                     yookassa_payment_id=yookassa_payment_id,
                 )
                 session.add(txn)

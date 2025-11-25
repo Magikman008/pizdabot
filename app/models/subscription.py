@@ -42,11 +42,10 @@ class Transaction(Base):
     who_bought_id = Column(BigInteger, nullable=True)
 
     transaction_id = Column(String(512), nullable=False)
-    amount_stars = Column(Numeric(10, 2), nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)  # ✅ Переименовано
     timestamp = Column(DateTime, default=datetime.now)
     type = Column(Enum(SubscriptionType), nullable=False)
-
-    # Новое поле для хранения ID платежа ЮКассы
     yookassa_payment_id = Column(String(255), nullable=True)
 
     subscription = relationship("Subscription", back_populates="transactions")
+
