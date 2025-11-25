@@ -1,33 +1,37 @@
 """
-Модуль для управления подписками через Telegram Stars
-Позволяет пользователям покупать подписки за звёздочки Telegram
+Модуль для управления подписками через Telegram Stars и ЮКассу
 """
 
 from datetime import datetime, timedelta
 from typing import Dict, Tuple
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from app.models import Subscription, Transaction, SubscriptionType
+
+import settings
+from app.models import SubscriptionType
+from app.models.subscription import Subscription, Transaction
 
 
 class SubscriptionManager:
-    # Настройки подписки
-    SUBSCRIPTION_PRICE_STARS = 1  # Цена подписки в звёздочках
-    SUBSCRIPTION_PRICE_RUBS = 150  # Цена подписки в рублях
-    SUBSCRIPTION_DURATION_DAYS = 30  # Длительность подписки в днях
+    # Настройки подписки из конфига
+    SUBSCRIPTION_PRICE_STARS = getattr(settings, 'SUBSCRIPTION_PRICE_STARS', 1)
+    SUBSCRIPTION_PRICE_RUBS = getattr(settings, 'SUBSCRIPTION_PRICE_RUBLES', 150)
+    SUBSCRIPTION_DURATION_DAYS = getattr(settings, 'SUBSCRIPTION_DURATION_DAYS', 30)
 
     def __init__(self, session_maker):
         self.session_maker = session_maker
 
     @classmethod
     def get_types_dict(cls) -> dict:
+        """Получить словарь доступных типов подписок с ценами"""
         return {
-            # SubscriptionType.YOOKASSA: cls.SUBSCRIPTION_PRICE_RUBS,
+            SubscriptionType.YOOKASSA: cls.SUBSCRIPTION_PRICE_RUBS,
             SubscriptionType.TELEGRAM_STARS: cls.SUBSCRIPTION_PRICE_STARS,
         }
 
     @classmethod
     def get_price_by_name(cls, name):
+        """Получить цену по типу подписки"""
         return cls.get_types_dict().get(SubscriptionType(name))
 
     def has_active_subscription(self, tg_chat_id: int) -> bool:
@@ -49,10 +53,11 @@ class SubscriptionManager:
             return f"""⭐ **Информация о подписке:**
 
 ❌ Подписка неактивна
-💰 Цена: {self.SUBSCRIPTION_PRICE_STARS} звёздочка
+💰 Цена: {self.SUBSCRIPTION_PRICE_STARS} звёздочка или {self.SUBSCRIPTION_PRICE_RUBS} ₽
 ⏱️ Длительность: {self.SUBSCRIPTION_DURATION_DAYS} дней
 
 💡 Используйте /sub для покупки подписки!"""
+
         with self.session_maker() as session:
             sub = (
                 session.query(Subscription)
@@ -70,12 +75,13 @@ class SubscriptionManager:
 ⏰ Осталось дней: {days_left}"""
 
     def activate_subscription(
-        self,
-        user_id: int,
-        chat_id: int,
-        price: int,
-        transaction_id: str = None,
-        type_name: str = None,
+            self,
+            user_id: int,
+            chat_id: int,
+            price: float,
+            transaction_id: str = None,
+            type_name: str = None,  # Это строка, например "yookassa"
+            yookassa_payment_id: str = None,
     ) -> Tuple[bool, str]:
         """Активировать или продлить подписку"""
         now = datetime.now()
@@ -102,15 +108,19 @@ class SubscriptionManager:
                 )
                 session.add(sub)
 
-            # сохраняем транзакцию
+            # Сохраняем транзакцию
             if transaction_id:
+                # ✅ ИСПРАВЛЕНИЕ: преобразуем строку в enum
+                subscription_type = SubscriptionType(type_name) if type_name else None
+
                 txn = Transaction(
                     subscription=sub,
                     transaction_id=transaction_id,
                     amount_stars=price,
                     timestamp=now,
                     who_bought_id=user_id,
-                    type=SubscriptionType(type_name),
+                    type=subscription_type,  # ✅ Передаём enum, а не строку
+                    yookassa_payment_id=yookassa_payment_id,
                 )
                 session.add(txn)
 
@@ -120,35 +130,28 @@ class SubscriptionManager:
             True,
             f"""✅ **Подписка активирована!**
 
-📅 Действует до: {new_expiry.strftime('%d.%m.%Y %H:%M')}
+    📅 Действует до: {new_expiry.strftime('%d.%m.%Y %H:%M')}
 
-🚀 Теперь вам доступны все премиум-функции бота!""",
+    🚀 Теперь вам доступны все премиум-функции бота!""",
         )
 
     def get_subscription_description(self) -> str:
-        """
-        Получить описание подписки
-
-        Returns:
-            str: Описание подписки
-        """
+        """Получить описание подписки"""
         return f"""⭐ **Премиум-подписка Подъёбыш**
 
-💰 **Цена:** {self.SUBSCRIPTION_PRICE_STARS} звёздочка Telegram
+💰 **Цена:** 
+• {self.SUBSCRIPTION_PRICE_STARS} звёздочка Telegram
+• {self.SUBSCRIPTION_PRICE_RUBS} рублей (банковская карта, ЮMoney, SberPay)
+
 ⏱️ **Длительность:** {self.SUBSCRIPTION_DURATION_DAYS} дней
 
 🎯 **Что включено:**
 • Возможность добавлять пользовательские триггеры
 
-💡 Звёздочки можно купить в настройках Telegram или получить от других пользователей."""
+💡 Выберите удобный способ оплаты ниже."""
 
     def get_premium_features_list(self) -> list:
-        """
-        Получить список премиум-функций
-
-        Returns:
-            list: Список премиум-функций
-        """
+        """Получить список премиум-функций"""
         return [
             "Добавление пользовательских триггеров",
             "Увеличенные лимиты на триггеры",
@@ -163,31 +166,36 @@ class SubscriptionManager:
         now = datetime.now()
         with self.session_maker() as session:
             subs = (
-                session.query(Subscription).filter(Subscription.expires_at > now).all()
+                session.query(Subscription)
+                .filter(Subscription.expires_at > now)
+                .all()
             )
         return {sub.tg_chat_id: sub for sub in subs}
 
     @staticmethod
     def create_subscription_keyboard(message):
+        """Создать клавиатуру с вариантами оплаты"""
         buttons = []
 
         for sub_type, price in SubscriptionManager.get_types_dict().items():
             if sub_type == SubscriptionType.YOOKASSA:
-                text = f"⭐ Купить подписку за {price} рублей"
+                text = f"💳 Оплатить {price} ₽ (карта/ЮMoney)"
             elif sub_type == SubscriptionType.TELEGRAM_STARS:
-                text = f"⭐ Купить подписку за {price} звёздочку"
+                text = f"⭐ Оплатить {price} звёздочку"
 
+            # КОРОТКИЙ callback_data!
             button = InlineKeyboardButton(
                 text=text,
-                callback_data=f"buy_subscription:{message.from_user.id}:{message.chat.id}:{price}:{sub_type.value}",
+                callback_data=f"buy_sub:{message.from_user.id}:{message.chat.id}:{sub_type.value}",
             )
             buttons.append([button])
 
-        # Кнопка информации
+        # Кнопка информации (тоже короткая)
         info_button = InlineKeyboardButton(
             text="ℹ️ Информация о подписке",
-            callback_data=f"subscription_info:{message.chat.id}",
+            callback_data=f"sub_info:{message.chat.id}",
         )
         buttons.append([info_button])
 
         return InlineKeyboardMarkup(inline_keyboard=buttons)
+

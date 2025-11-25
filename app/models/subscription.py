@@ -17,8 +17,9 @@ from app.models import Base
 
 
 class SubscriptionType(enum.Enum):
-    YOOKASSA = "yookassa"
-    TELEGRAM_STARS = "telegram_stars"
+    YOOKASSA = "yookassa"  # ✅ Значение должно быть lowercase
+    TELEGRAM_STARS = "telegram_stars"  # ✅ Значение должно быть lowercase
+
 
 
 class Subscription(Base):
@@ -44,5 +45,8 @@ class Transaction(Base):
     amount_stars = Column(Numeric(10, 2), nullable=False)
     timestamp = Column(DateTime, default=datetime.now)
     type = Column(Enum(SubscriptionType), nullable=False)
+
+    # Новое поле для хранения ID платежа ЮКассы
+    yookassa_payment_id = Column(String(255), nullable=True)
 
     subscription = relationship("Subscription", back_populates="transactions")

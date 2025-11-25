@@ -1,7 +1,6 @@
-# Настройки бота
-# Скопируйте этот файл в settings.py и укажите ваш токен бота
+# settings.py.default
 
-# Токен бота от @BotFather
+# Настройки бота
 local_token = "YOUR_BOT_TOKEN_HERE"
 production_token = ""
 
@@ -20,13 +19,9 @@ else:
     DB_NAME = "pizdabot_db"
     token = local_token
 
-if RUN_ON_PRODUCTION:
-    yookassa_token = ""
-else:
-    yookassa_token = ""
+# Убираем старую переменную yookassa_token
+# Она больше не нужна, так как для ЮКассы используется прямой API
 
-# URL базы данных (например, SQLite, PostgreSQL)
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}?charset=utf8mb4"
 
-# список логинов Администраторов
 ADMIN_USERNAMES = []
